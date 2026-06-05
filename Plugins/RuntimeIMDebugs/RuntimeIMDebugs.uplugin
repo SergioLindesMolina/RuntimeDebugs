@@ -1,0 +1,31 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "RuntimeIMDebugs",
+	"Description": "Lightweight runtime immediate mode debugging framework for Unreal Engine. Create runtime debug tabs, buttons, toggles, sliders and float fields for gameplay debugging and rapid iteration during PIE.",
+	"Category": "Debug",
+	"CreatedBy": "Sergio Lindes",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"EnabledByDefault": false,
+	"CanContainContent": true,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "RuntimeIMDebugs",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "SlateIM",
+			"Enabled": true
+		}
+	]
+}
