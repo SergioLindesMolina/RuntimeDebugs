@@ -1,15 +1,15 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "RuntimeIMDebugsSubsystem.h"
-#include "RuntimeIMDebugsWindow.h"
 #include "RuntimeIMDebugsLog.h"
 
 void URuntimeIMDebugsSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
-	//Initial Default tab
-	AddTab(DefaultTab, DefaultTab.ToString());
+	//Initial Default tab and Default Section
+	AddTab(DefaultTab);
+	AddDebugSection(DefaultTab, DefaultSection);
 }
 
 void URuntimeIMDebugsSubsystem::Deinitialize()
@@ -21,59 +21,87 @@ void URuntimeIMDebugsSubsystem::Deinitialize()
 void URuntimeIMDebugsSubsystem::ShowWindow()
 {
 #if WITH_EDITOR
-	FGlobalTabmanager::Get()->TryInvokeTab(FRuntimeIMDebugsDockable::GetTabId());
+	OnWindowCommand.Broadcast(ERuntimeIMDebugWindowCommand::Show);
 #endif
 }
 
 void URuntimeIMDebugsSubsystem::HideWindow()
 {
 #if WITH_EDITOR
-	TSharedPtr<SDockTab> DockTab = FGlobalTabmanager::Get()->FindExistingLiveTab(FRuntimeIMDebugsDockable::GetTabId());
-	if (DockTab.IsValid()) 
-	{
-		DockTab->RequestCloseTab();
-	}	
+	OnWindowCommand.Broadcast(ERuntimeIMDebugWindowCommand::Hide);
 #endif
 }
 
 void URuntimeIMDebugsSubsystem::ToggleWindow()
 {
 #if WITH_EDITOR
-	TSharedPtr<SDockTab> DockTab = FGlobalTabmanager::Get()->FindExistingLiveTab(FRuntimeIMDebugsDockable::GetTabId());
-	if (DockTab.IsValid())
-	{
-		DockTab->RequestCloseTab();
-	}
-	else
-	{
-		FGlobalTabmanager::Get()->TryInvokeTab(FRuntimeIMDebugsDockable::GetTabId());
-	}
+	OnWindowCommand.Broadcast(ERuntimeIMDebugWindowCommand::Toggle);	
 #endif
 }
 
-void URuntimeIMDebugsSubsystem::AddTab(const FName InID, const FString& InLabel)
+int URuntimeIMDebugsSubsystem::AddTab(const FName InID, const FString& InLabel)
 {
-	auto FoundTab = Tabs.FindByPredicate([InID](const FDebugTab& InTab)
+	auto FoundTabIndex = Tabs.IndexOfByPredicate([InID](const FDebugTab& InTab)
 		{
 			return InTab.ID == InID;
 		});
 
-	if (!FoundTab)
+
+	if (FoundTabIndex == INDEX_NONE)
 	{
 		FString TabLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
-		Tabs.Add(FDebugTab(InID, TabLabel));
+		return Tabs.Add(FDebugTab(InID, TabLabel));
+		
 	}
 	else
 	{
 		UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't add DebugTab %s with id %s , because is already assigned to another debug tab : %s ")
-			,*InLabel ,*InID.ToString(), *FoundTab->Label);
+			,*InLabel ,*InID.ToString(), *Tabs[FoundTabIndex].Label);
+		return FoundTabIndex;
 	}
+}
+
+int URuntimeIMDebugsSubsystem::AddDebugSection(const FName InTabID, const FName InID, const FString& InLabel, int InDrawPriority)
+{
+	if (FDebugTab * SelectedTab = GetTab(InTabID))
+	{
+		auto FoundDebugSectionIndex = SelectedTab->DebugSections.IndexOfByPredicate([InID](const FDebugSection& DebugSection) { return DebugSection.Field.ID == InID; });
+		
+		if (FoundDebugSectionIndex == INDEX_NONE)
+		{
+			FString SectionLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
+			int CreatedDebugSectionIndex = SelectedTab->DebugSections.Emplace(InID, SectionLabel, InDrawPriority);
+
+			//Given that tabs only contains one type, DebugSections
+			//Always sort the array after adding a new DebugSection to avoid sorting each frame in the draw window
+
+			SelectedTab->DebugSections.StableSort([](const FDebugSection& A, const FDebugSection& B)
+				{
+					return A.Field.DrawPriority < B.Field.DrawPriority;
+				});
+
+
+			return CreatedDebugSectionIndex;
+		}
+		else
+		{
+			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't add the DebugSection %s with id : '%s' , because is already exist in the tab : '%s' ")
+				, *InLabel, *InID.ToString(), *InTabID.ToString());
+			return FoundDebugSectionIndex;
+		}
+	}
+	else
+	{
+		return INDEX_NONE;
+	}
+
 }
 
 TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 {
 	return Tabs;
 }
+
 
  FDebugTab* URuntimeIMDebugsSubsystem::GetTab(const FName InID)
 {
@@ -105,35 +133,133 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 		 return nullptr;
 	 }
  }
+
+ FDebugSection* URuntimeIMDebugsSubsystem::GetDebugSection(const FName InTabID, const FName InID)
+ {
+	 if (FDebugTab* SelectedTab = GetTab(InTabID)) 
+	 {
+		 auto FoundDebugSection = SelectedTab->DebugSections.FindByPredicate([InID](FDebugSection& InDebugSection) { return InDebugSection.Field.ID == InID; });
+
+		 return FoundDebugSection;
+	 }
+	 else
+	 {
+		return nullptr;
+	 }
+ }
+
+ FDebugSection* URuntimeIMDebugsSubsystem::GetDebugSection(FDebugTab* InTab, const FName InID)
+ {
+	 if (InTab)
+	 {
+		 auto FoundDebugSection = InTab->DebugSections.FindByPredicate([InID](const FDebugSection& InDebugSection) { return InDebugSection.Field.ID == InID; });
+
+		 return FoundDebugSection;
+	 }
+	 else
+	 {
+		 return nullptr;
+	 }
+ }
+
+ const FDebugSection* URuntimeIMDebugsSubsystem::GetDebugSection(const FName InTabID, const FName InID) const
+ {
+	 if (const FDebugTab* SelectedTab = GetTab(InTabID))
+	 {
+		 auto FoundDebugSection = SelectedTab->DebugSections.FindByPredicate([InID](const FDebugSection& InDebugSection) { return InDebugSection.Field.ID == InID; });
+
+		 return FoundDebugSection;
+	 }
+	 else
+	 {
+		 return nullptr;
+	 }
+ }
+
+ FDebugTab* URuntimeIMDebugsSubsystem::GetOrCreateTab(const FName InTabID)
+ {
+	 FName ResolvedTabID = ResolveTabID(InTabID);
+
+	 //Check if the selected tab exist or if the passed id is empty in which case the default tab will be used
+	 if (FDebugTab* SelectedTab = GetTab(ResolvedTabID))
+	 {	
+		 return SelectedTab;
+	 }
+	 else
+	 {
+		 //If the selected tab does not exist we create the tab
+		 int CreatedTabIndex = AddTab(ResolvedTabID, ResolvedTabID.ToString());
+		 return &Tabs[CreatedTabIndex];
+	 }
+ }
+
+ FDebugSection* URuntimeIMDebugsSubsystem::GetOrCreateDebugSection(const FName InTabID, const FName InSectionID)
+ {
+	 //We need a valid tab to add or find a section
+	 FDebugTab* SelectedTab = GetOrCreateTab(InTabID);
+	 if (!SelectedTab) 
+	 {
+		return nullptr;
+	 }
+	 
+	 FName ProcessedTabID = ResolveTabID(InTabID);
+	 FName ProcessedSectionID = ResolveDebugSectionID(InSectionID);
+
+
+	 //Check if the selected Debug section exist or if the passed debug section id is empty in wich case the default section will be used 
+	 if (FDebugSection* SelectedSection =  GetDebugSection(SelectedTab, ProcessedSectionID))
+	 {
+		 return SelectedSection;
+	 }
+	 else
+	 {
+		 int CreatedSectionIndex = AddDebugSection(ProcessedTabID, ProcessedSectionID);
+		 return &SelectedTab->DebugSections[CreatedSectionIndex];
+	 }
+ }
+
+ const FName URuntimeIMDebugsSubsystem::ResolveTabID(const FName InTabID) const
+ {
+	 return InTabID.IsNone() ? DefaultTab : InTabID;
+ }
+
+ const FName URuntimeIMDebugsSubsystem::ResolveDebugSectionID(const FName InSectionID) const
+ {
+	 return InSectionID.IsNone() ? DefaultSection : InSectionID;
+ }
 	
 
-
-void URuntimeIMDebugsSubsystem::AddButton(const FName InTabID, const FName InID, const FString& InLabel, int InDrawPriority)
-{
-	if ( FDebugTab* SelectedTab = GetTab(InTabID)) 
+void URuntimeIMDebugsSubsystem::AddButton(const FName InTabID, const FName InSectionID, const FName InID, const FString& InLabel, int InDrawPriority)
+{	
+	if (FDebugSection* SelectedSection = GetOrCreateDebugSection(InTabID, InSectionID)) 
 	{
-		auto FoundButton = SelectedTab->Buttons.FindByPredicate([InID](const FDebugButton& Button) { return Button.Field.ID == InID; });
-
+		auto FoundButton = SelectedSection->Buttons.FindByPredicate([InID](const FDebugButton& Button) { return Button.Field.ID == InID; });
+		
 		if (FoundButton)
 		{
-			UE_LOG(LogRuntimeIMDebugs, Error, 
+			UE_LOG(LogRuntimeIMDebugs, Error,
 				TEXT("Can't add the DebugButton %s with id : '%s' , because is already assigned to the DebugButton : '%s' ")
-				,*InLabel ,*InID.ToString() ,*FoundButton->Label);
+				, *InLabel, *InID.ToString(), *FoundButton->Label);
 		}
 		else
 		{
 			FString ButtonLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
-			SelectedTab->Buttons.Emplace(InID, ButtonLabel, InDrawPriority);
-		}		
+			SelectedSection->Buttons.Emplace(InID, ButtonLabel, InDrawPriority);
+		}
 	}
-
+	else
+	{
+		UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Error tring to create the Button with id %s"), *InID.ToString());
+	}		
+	
 }
 
-void URuntimeIMDebugsSubsystem::AddToggle(const FName InTabID, const FName InID, const FString& InLabel, bool InValue, int InDrawPriority)
+
+void URuntimeIMDebugsSubsystem::AddToggle(const FName InTabID, const FName InSectionID, const FName InID, const FString& InLabel, bool InValue, int InDrawPriority)
 {
-	if (FDebugTab* SelectedTab = GetTab(InTabID))
+	if (FDebugSection* SelectedSection = GetOrCreateDebugSection(InTabID, InSectionID))
 	{
-		auto FoundToggle = SelectedTab->Toggles.FindByPredicate([InID](const FDebugToggle& Toggle) { return Toggle.Field.ID == InID; });
+		auto FoundToggle = SelectedSection->Toggles.FindByPredicate([InID](const FDebugToggle& Toggle) { return Toggle.Field.ID == InID; });
 
 		if (FoundToggle)
 		{
@@ -143,16 +269,16 @@ void URuntimeIMDebugsSubsystem::AddToggle(const FName InTabID, const FName InID,
 		else
 		{
 			FString ToggleLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
-			SelectedTab->Toggles.Emplace(InID, ToggleLabel, InValue, InDrawPriority);
+			SelectedSection->Toggles.Emplace(InID, ToggleLabel, InValue, InDrawPriority);
 		}
 	}
 }
 
-bool URuntimeIMDebugsSubsystem::GetToggleState(const FName InTabID, const FName InID) const
+bool URuntimeIMDebugsSubsystem::GetToggleState(const FName InTabID, const FName InSectionID, const FName InID) const
 {
-	if (const FDebugTab* SelectedTab = GetTab(InTabID))
+	if (const FDebugSection* SelectedSection = GetDebugSection(InTabID, InSectionID))
 	{
-		auto FoundToggle = SelectedTab->Toggles.FindByPredicate([InID](const FDebugToggle& InToggle) 
+		auto FoundToggle = SelectedSection->Toggles.FindByPredicate([InID](const FDebugToggle& InToggle)
 			{ return InToggle.Field.ID == InID;});
 		
 		if (FoundToggle)
@@ -172,11 +298,11 @@ bool URuntimeIMDebugsSubsystem::GetToggleState(const FName InTabID, const FName 
 	}	
 }
 
-void URuntimeIMDebugsSubsystem::SetToggleState(const FName InTabID, const FName InID, bool InValue)
+void URuntimeIMDebugsSubsystem::SetToggleState(const FName InTabID, const FName InSectionID, const FName InID, bool InValue)
 {
-	if (FDebugTab* SelectedTab = GetTab(InTabID))
+	if (FDebugSection* SelectedSection = GetDebugSection(InTabID, InSectionID))
 	{
-		auto FoundToggle = SelectedTab->Toggles.FindByPredicate([InID](const FDebugToggle& InToggle) 
+		auto FoundToggle = SelectedSection->Toggles.FindByPredicate([InID](const FDebugToggle& InToggle)
 			{ return InToggle.Field.ID == InID;});
 		
 		if (FoundToggle)
@@ -193,39 +319,40 @@ void URuntimeIMDebugsSubsystem::SetToggleState(const FName InTabID, const FName 
 }
 
 //TODO ADD comprobation to check if already exist a toggle with that id and returns value to know of succes 
-void URuntimeIMDebugsSubsystem::AddSlider(const FName InTabID, const FName InID, const FString& InLabel, float InValue, int InDrawPriority)
+void URuntimeIMDebugsSubsystem::AddSpinBox(const FName InTabID, const FName InSectionID, const FName InID, const FString& InLabel, float InValue ,
+	float InMin, float InMax, int InDrawPriority)
 {
-	if (FDebugTab* SelectedTab = GetTab(InTabID))
+	if (FDebugSection* SelectedSection = GetOrCreateDebugSection(InTabID, InSectionID))
 	{
-		auto FoundSlider = SelectedTab->Sliders.FindByPredicate([InID](const FDebugSlider& Slider) { return Slider.Field.ID == InID; });
+		auto FoundSpinBox = SelectedSection->SpinBoxes.FindByPredicate([InID](const FDebugSpinBox& InSpinBox) { return InSpinBox.Field.ID == InID; });
 
-		if (FoundSlider)
+		if (FoundSpinBox)
 		{
-			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't add the DebugSlider %s with id : '%s' , because is already assigned to the DebugSlider : '%s' ")
-				, *InLabel, *InID.ToString(), *FoundSlider->Label);
+			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't add the DebugSpinBox %s with id : '%s' , because is already assigned to the DebugSpinBox : '%s' ")
+				, *InLabel, *InID.ToString(), *FoundSpinBox->Label);
 		}
 		else
-		{
-			FString SliderLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
-			SelectedTab->Sliders.Emplace(InID, SliderLabel, InValue, InDrawPriority);
+		{			
+			FString SpinBoxLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
+			SelectedSection->SpinBoxes.Emplace(InID, SpinBoxLabel, InValue, InMin, InMax, InDrawPriority);
 		}		
 	}
 }
 
-float URuntimeIMDebugsSubsystem::GetSliderValue(const FName InTabID, const FName InID) const
+float URuntimeIMDebugsSubsystem::GetSpinBoxValue(const FName InTabID, const FName InSectionID, const FName InID) const
 {
-	if (const FDebugTab* SelectedTab = GetTab(InTabID))
+	if (const FDebugSection* SelectedSection = GetDebugSection(InTabID, InSectionID))
 	{
-		auto FoundSlider = SelectedTab->Sliders.FindByPredicate([InID](const FDebugSlider& InSlider) 
-			{ return InSlider.Field.ID == InID;});
+		auto FoundSpinBox = SelectedSection->SpinBoxes.FindByPredicate([InID](const FDebugSpinBox& InSpinBox)
+			{ return InSpinBox.Field.ID == InID;});
 		
-		if (FoundSlider)
+		if (FoundSpinBox)
 		{
-			return FoundSlider->Value;
+			return FoundSpinBox->Value;
 		}
 		else
 		{
-			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't get slider value the id : '%s' , is not assigned to any FDebugSlider"),
+			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't get SpinBox value the id : '%s' , is not assigned to any FDebugSpinBox"),
 				*InID.ToString());
 			return 0.0f;
 		}
@@ -236,30 +363,30 @@ float URuntimeIMDebugsSubsystem::GetSliderValue(const FName InTabID, const FName
 	}
 }
 
-void URuntimeIMDebugsSubsystem::SetSliderValue(const FName InTabID, const FName InID, float InValue)
+void URuntimeIMDebugsSubsystem::SetSpinBoxValue(const FName InTabID, const FName InSectionID, const FName InID, float InValue)
 {
-	if (FDebugTab* SelectedTab = GetTab(InTabID))
+	if (FDebugSection* SelectedSection = GetDebugSection(InTabID, InSectionID))
 	{
-		auto FoundSlider = SelectedTab->Sliders.FindByPredicate([InID](const FDebugSlider& InSlider) 
-			{ return InSlider.Field.ID == InID;});
+		auto FoundSpinBox = SelectedSection->SpinBoxes.FindByPredicate([InID](const FDebugSpinBox& InSpinBox)
+			{ return InSpinBox.Field.ID == InID;});
 		
-		if (FoundSlider)
+		if (FoundSpinBox)
 		{
-			FoundSlider->Value = InValue;
+			FoundSpinBox->Value = InValue;
 		}
 		else
 		{
-			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't set slider value the id : '%s' , is not assigned to any FDebugSlider"),
+			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't set SpinBox value the id : '%s' , is not assigned to any FDebugSpinBox"),
 				*InID.ToString());
 		}
 	}
 }
 
-void URuntimeIMDebugsSubsystem::AddFloatField(const FName InTabID, const FName InID, const FString& InLabel, float InValue, int InDrawPriority)
+void URuntimeIMDebugsSubsystem::AddFloatField(const FName InTabID, const FName InSectionID, const FName InID, const FString& InLabel, float InValue, int InDrawPriority)
 {
-	if (FDebugTab* SelectedTab = GetTab(InTabID))
+	if (FDebugSection* SelectedSection = GetOrCreateDebugSection(InTabID, InSectionID))
 	{
-		auto FoundFloatField = SelectedTab->FloatFields.FindByPredicate([InID](const FDebugFloatField& FloatField) 
+		auto FoundFloatField = SelectedSection->FloatFields.FindByPredicate([InID](const FDebugFloatField& FloatField)
 			{ return FloatField.Field.ID == InID; });
 
 		if (FoundFloatField)
@@ -270,16 +397,16 @@ void URuntimeIMDebugsSubsystem::AddFloatField(const FName InTabID, const FName I
 		else
 		{
 			FString FloatLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
-			SelectedTab->FloatFields.Emplace(InID, FloatLabel, FString::SanitizeFloat(InValue), InValue, InDrawPriority);
+			SelectedSection->FloatFields.Emplace(InID, FloatLabel, FString::SanitizeFloat(InValue), InValue, InDrawPriority);
 		}		
 	}
 }
 
-float URuntimeIMDebugsSubsystem::GetFloatFieldValue(const FName InTabID, const FName InID) const
+float URuntimeIMDebugsSubsystem::GetFloatFieldValue(const FName InTabID, const FName InSectionID, const FName InID) const
 {
-	if (const FDebugTab* SelectedTab = GetTab(InTabID))
+	if (const FDebugSection* SelectedSection = GetDebugSection(InTabID, InSectionID))
 	{
-		auto FoundFloatField = SelectedTab->FloatFields.FindByPredicate([InID](const FDebugFloatField& InFloatField)
+		auto FoundFloatField = SelectedSection->FloatFields.FindByPredicate([InID](const FDebugFloatField& InFloatField)
 			{ return InFloatField.Field.ID == InID; });
 		
 		if (FoundFloatField)
@@ -299,11 +426,11 @@ float URuntimeIMDebugsSubsystem::GetFloatFieldValue(const FName InTabID, const F
 	}
 }
 
-void URuntimeIMDebugsSubsystem::SetFloatFieldValue(const FName InTabID, const FName InID, float InValue)
+void URuntimeIMDebugsSubsystem::SetFloatFieldValue(const FName InTabID, const FName InSectionID, const FName InID, float InValue)
 {
-	if (FDebugTab* SelectedTab = GetTab(InTabID))
+	if (FDebugSection* SelectedSection = GetDebugSection(InTabID, InSectionID))
 	{
-		auto FoundFloatField = SelectedTab->FloatFields.FindByPredicate([InID](const FDebugFloatField& InFloatField)
+		auto FoundFloatField = SelectedSection->FloatFields.FindByPredicate([InID](const FDebugFloatField& InFloatField)
 			{ return InFloatField.Field.ID == InID; });
 
 		if (FoundFloatField)

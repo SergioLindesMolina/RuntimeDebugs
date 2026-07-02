@@ -33,7 +33,6 @@
  *		- Experimental feature controls
  */
 
-class FRuntimeIMDebugsExposed;
 
 class FRuntimeIMDebugsModule : public IModuleInterface
 {
@@ -43,5 +42,4 @@ public:
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
 
-	FRuntimeIMDebugsExposed* RuntimeDebugWindow;
 };

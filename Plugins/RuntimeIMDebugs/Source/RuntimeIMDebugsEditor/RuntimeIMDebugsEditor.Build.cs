@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class RuntimeIMDebugs : ModuleRules
+public class RuntimeIMDebugsEditor : ModuleRules
 {
-	public RuntimeIMDebugs(ReadOnlyTargetRules Target) : base(Target)
+	public RuntimeIMDebugsEditor(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
@@ -25,7 +25,9 @@ public class RuntimeIMDebugs : ModuleRules
 			new string[]
 			{
 				"Core",
-				"SlateIM"			}
+				"SlateIM",
+				"RuntimeIMDebugs"
+			}
 			);
 			
 		

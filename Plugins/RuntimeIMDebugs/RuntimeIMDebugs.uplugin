@@ -20,6 +20,12 @@
 			"Name": "RuntimeIMDebugs",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "RuntimeIMDebugsEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"PlatformDenyList": []
 		}
 	],
 	"Plugins": [
