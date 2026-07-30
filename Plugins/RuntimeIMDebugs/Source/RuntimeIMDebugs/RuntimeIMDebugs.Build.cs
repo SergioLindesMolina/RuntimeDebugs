@@ -25,7 +25,9 @@ public class RuntimeIMDebugs : ModuleRules
 			new string[]
 			{
 				"Core",
-				"SlateIM"			}
+				"SlateIM",
+                "DeveloperSettings"
+            }
 			);
 			
 		

@@ -1,6 +1,7 @@
 
 #include "RuntimeIMDebugsWindow.h"
 #include "RuntimeIMDebugsSubsystem.h"
+#include "RuntimeIMDebugsSettings.h"
 
 #include "Engine.h"
 
@@ -89,18 +90,33 @@ void FRuntimeIMDebugsExposed::DrawFloatField(FDebugFloatField& InFloatField, URu
 	SlateIM::EndHorizontalStack();
 }
 
+void FRuntimeIMDebugsExposed::DrawComboBox(FDebugComboBox& InComboBox, URuntimeIMDebugsSubsystem* InDebugSubsystem)
+{
+	SlateIM::BeginHorizontalStack();
+	SlateIM::Text(InComboBox.Label);
+
+	if (SlateIM::ComboBox(InComboBox.Options, InComboBox.Index, false))
+	{
+		InDebugSubsystem->OnDebugComboBoxChanged.Broadcast(InComboBox.Field.ID, InComboBox.Index);
+	}
+
+	SlateIM::EndHorizontalStack();
+}
+
 void FRuntimeIMDebugsExposed::DrawDebugSection(FDebugSection& InDebugSection, URuntimeIMDebugsSubsystem* InDebugSubsystem)
 {	
+	const URuntimeIMDebugsSettings* Settings = GetDefault<URuntimeIMDebugsSettings>();
+
 	SlateIM::AutoSize();
 	SlateIM::BeginBorder(
-		&InDebugSubsystem->TestBrush,
+		&Settings->SectionBorderBrush,
 		Orient_Vertical,
 		false);
 
 	// Header
 	SlateIM::AutoSize();
 	SlateIM::BeginBorder(
-		&InDebugSubsystem->TestBrush2,
+		&Settings->SectionBorderHeaderBrush,
 		Orient_Vertical,
 		false,
 		FMargin(8.f, 6.f));
@@ -124,6 +140,15 @@ void FRuntimeIMDebugsExposed::DrawDebugSection(FDebugSection& InDebugSection, UR
 				DrawFloatField(FloatField, InDebugSubsystem);
 			}));
 	}
+
+	for (FDebugComboBox& ComboBox : InDebugSection.ComboBoxes)
+	{
+		DrawEntries.Add(FDebugFieldDrawListEntry(ComboBox.Field.DrawPriority, [this, &ComboBox, InDebugSubsystem]()
+			{
+				DrawComboBox(ComboBox, InDebugSubsystem);
+			}));
+	}
+
 
 	for (FDebugToggle& Toggle : InDebugSection.Toggles)
 	{
@@ -204,19 +229,23 @@ void FRuntimeIMDebugsDockable::RegisterTab()
 {
 	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
 
+
 	if (!TabManager->HasTabSpawner(TabId)) 
 	{
+
 		TabManager->RegisterNomadTabSpawner(
 			TabId,
 			FOnSpawnTab::CreateStatic(&FRuntimeIMDebugsDockable::SpawnTab))
 			.SetDisplayName(NSLOCTEXT("RuntimeDebugsWindow", "RuntimeDebugsWindowTab", "RuntimeDebugsWindow"))
 			.SetMenuType(ETabSpawnerMenuType::Hidden);
+
 	}
 
 	if (!RuntimeIMWidget.IsValid())
 	{
 		RuntimeIMWidget = MakeShared<FRuntimeIMDebugsExposed>();
 		RuntimeIMWidget->EnableWidget();
+		HandleWindowCommand(ERuntimeIMDebugWindowCommand::Hide);
 		WindowCommandHandle = URuntimeIMDebugsSubsystem::OnWindowCommand.AddStatic(&FRuntimeIMDebugsDockable::HandleWindowCommand);
 	}
 
@@ -227,6 +256,7 @@ void FRuntimeIMDebugsDockable::UnregisterTab()
 	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
 	if (TabManager->HasTabSpawner(TabId)) 
 	{
+
 		TabManager->UnregisterNomadTabSpawner(TabId);
 	}
 

@@ -11,6 +11,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDebugButtonPressed, const FName, 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDebugToggleChanged, const FName, ID, bool, Value);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDebugSpinBoxChanged, const FName, ID, float, Value);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDebugFloatFieldChanged, const FName, ID, float, Value);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDebugComboBoxChanged, const FName, ID, int, Index);
 
 enum class ERuntimeIMDebugWindowCommand : uint8
 {
@@ -95,6 +96,40 @@ struct FDebugFloatField
 
     UPROPERTY(BlueprintReadOnly, Category = "DebugFloatField")
     float Value;
+};
+
+USTRUCT(BlueprintType)
+struct FDebugComboBox
+{
+    GENERATED_BODY()
+
+    FDebugComboBox()
+        : Field(NAME_None, 0)
+        , Label("")
+        , Options(TArray<FString>{})
+        , Index(0)
+    {
+    }
+
+    FDebugComboBox(FName InID, const FString& InLable, const TArray<FString>& InOptions, int InIndex, int InDrawPriority)
+        : Field(InID, InDrawPriority)
+        , Label(InLable)
+        , Options(InOptions)
+        , Index(InIndex)
+    {
+    }
+
+    UPROPERTY(BlueprintReadOnly, Category = "DebugComboBox")
+    FDebugField Field;
+
+    UPROPERTY(BlueprintReadOnly, Category = "DebugComboBox")
+    FString Label;
+
+    UPROPERTY(BlueprintReadOnly, Category = "DebugComboBox")
+    TArray<FString> Options;
+
+    UPROPERTY(BlueprintReadOnly, Category = "DebugComboBox")
+    int Index;
 };
 
 USTRUCT(BlueprintType)
@@ -223,6 +258,8 @@ struct FDebugSection
     TArray<FDebugSpinBox> SpinBoxes;
     UPROPERTY(BlueprintReadOnly, Category = "DebugSection")
     TArray<FDebugFloatField> FloatFields;
+    UPROPERTY(BlueprintReadOnly, Category = "DebugSection")
+    TArray<FDebugComboBox> ComboBoxes;
 
 };
 
@@ -264,19 +301,8 @@ class RUNTIMEIMDEBUGS_API URuntimeIMDebugsSubsystem : public UGameInstanceSubsys
 
 public:
 
-    UPROPERTY(BlueprintReadWrite)
-    FSlateBrush TestBrush;
-
-    UPROPERTY(BlueprintReadWrite)
-    FSlateBrush TestBrush2;
-
-
-
+    //Delegate to comunicate with the editor window to open and close the window
     inline static FOnWindowCommand OnWindowCommand;
-
-    //The variable and the value have the same name to be able to use that as a default value in blueprints functions
-    const FName DefaultTab = TEXT("DefaultTab");
-    const FName DefaultSection = TEXT("DefaultSection");
 
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
     
@@ -299,31 +325,41 @@ public:
     UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     int AddDebugSection(const FName InTabID, const FName InID, const FString& InLabel = TEXT(""), int InDrawPriority = 0);
 
-    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem", meta=(InTabId = DefaultTab))
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     void AddButton(const FName InTabID, const FName InSectionID, const FName InID, const FString& InLabel = TEXT(""), int InDrawPriority = 0);
 
-    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem", meta = (InTabId = DefaultTab))
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     void AddToggle(const FName InTabID, const FName InSectionID, const FName InID, const FString& InLabel = TEXT(""), bool InValue = false, int InDrawPriority = 0);
-    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem", meta = (InTabId = DefaultTab))
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     bool GetToggleState(const FName InTabID, const FName InSectionID, const FName InID) const;
-    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem", meta = (InTabId = DefaultTab))
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     void SetToggleState(const FName InTabID, const FName InSectionID, const FName InID, bool InValue);
-
-    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem", meta = (InTabId = DefaultTab))
+   
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     void AddSpinBox(const FName InTabID, const FName InSectionID, const FName InID, const FString& InLabel = TEXT(""), float InValue = 0.f,
         float InMin = 0.0f, float InMax = 1.0f, int InDrawPriority = 0);
-    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem", meta = (InTabId = DefaultTab))
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     float GetSpinBoxValue(const FName InTabID, const FName InSectionID, const FName InID) const;
-    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem", meta = (InTabId = DefaultTab))
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     void SetSpinBoxValue(const FName InTabID, const FName InSectionID, const FName InID, float InValue);
 
-    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem", meta = (InTabId = DefaultTab))
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     void AddFloatField(const FName InTabID , const FName InSectionID, const FName InID, const FString& InLabel = TEXT(""), float InValue = 0.f, int InDrawPriority = 0);
-    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem", meta = (InTabId = DefaultTab))
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     float GetFloatFieldValue(const FName InTabID, const FName InSectionID, const FName InID) const;
-    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem", meta = (InTabId = DefaultTab))
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     void SetFloatFieldValue(const FName InTabID, const FName InSectionID, const FName InID, float InValue);
-    
+
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
+    void AddComboBox(const FName InTabID, const FName InSectionID, const FName InID, const FString& InLabel, const TArray<FString>& InOptions, int InIndex = 0, int InDrawPriority = 0);
+
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
+    int GetComboBoxIndex(const FName InTabID, const FName InSectionID, const FName InID) const;
+
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
+    void SetComboBoxIndex(const FName InTabID, const FName InSectionID, const FName InID, int InIndex);
+
+
     UPROPERTY(BlueprintAssignable, Category = "RuntimeDebugsSubsystem")
     FOnDebugButtonPressed OnButtonPressed;
     UPROPERTY(BlueprintAssignable, Category = "RuntimeDebugsSubsystem")
@@ -332,6 +368,8 @@ public:
     FOnDebugSpinBoxChanged OnSpinBoxChanged;
     UPROPERTY(BlueprintAssignable, Category = "RuntimeDebugsSubsystem")
     FOnDebugFloatFieldChanged OnDebugFloatFieldChanged;
+    UPROPERTY(BlueprintAssignable, Category = "RuntimeDebugsSubsystem")
+    FOnDebugComboBoxChanged OnDebugComboBoxChanged;
 
 protected:
 
@@ -353,7 +391,18 @@ protected:
 
     const FName ResolveDebugSectionID(const FName InSectionID) const;
 
+    void HandleShowWindowConsoleCommand(const TArray<FString>& Args);
+
     UPROPERTY(BlueprintReadOnly, Category = "RuntimeDebugsSubsystem")
     TArray<FDebugTab> Tabs;
+
+private:
+
+    //Runtime value of the default tab name and the default section name , they get initialized upon construction when the game start 
+    // and then should no be changed
+    FName DefaultTab;
+    FName DefaultSection;
+
+    IConsoleObject* ShowWindowConsoleCommand = nullptr;
     
 };

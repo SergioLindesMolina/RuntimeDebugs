@@ -1,13 +1,32 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "RuntimeIMDebugsSubsystem.h"
+#include "RuntimeIMDebugsSettings.h"
 #include "RuntimeIMDebugsLog.h"
+
+#include "HAL/IConsoleManager.h"
 
 void URuntimeIMDebugsSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
-	//Initial Default tab and Default Section
+	//Register Console Command
+	ShowWindowConsoleCommand = IConsoleManager::Get().RegisterConsoleCommand(
+		TEXT("RuntimeIMDebugs.ShowWindow"),
+		TEXT("Shows or hides the RuntimeIMDebugs window. 0 = Hide, 1 = Show. NoArgument = Toggle"),
+		FConsoleCommandWithArgsDelegate::CreateUObject(
+			this,
+			&URuntimeIMDebugsSubsystem::HandleShowWindowConsoleCommand),
+		ECVF_Default
+	);
+
+	//Initialize the Default tab and Default Section
+	const URuntimeIMDebugsSettings* Settings = GetDefault<URuntimeIMDebugsSettings>();
+
+	//Get the user desired name for the 2 default properties
+	DefaultTab = Settings->DefaultTabName;
+	DefaultSection = Settings->DefaultSectionName;
+
 	AddTab(DefaultTab);
 	AddDebugSection(DefaultTab, DefaultSection);
 }
@@ -15,6 +34,14 @@ void URuntimeIMDebugsSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void URuntimeIMDebugsSubsystem::Deinitialize()
 {
 	Tabs.Empty();
+	
+	//Unregister the console command
+	if (ShowWindowConsoleCommand) 
+	{
+		IConsoleManager::Get().UnregisterConsoleObject(ShowWindowConsoleCommand);
+		ShowWindowConsoleCommand = nullptr;
+	}
+
 	Super::Deinitialize();
 }
 
@@ -226,6 +253,27 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
  const FName URuntimeIMDebugsSubsystem::ResolveDebugSectionID(const FName InSectionID) const
  {
 	 return InSectionID.IsNone() ? DefaultSection : InSectionID;
+ }
+
+ void URuntimeIMDebugsSubsystem::HandleShowWindowConsoleCommand(const TArray<FString>& Args)
+ {
+	 if (Args.IsEmpty()) 
+	 {
+		 ToggleWindow();
+		 return;
+	 }
+
+	 const bool bShowWindow = Args[0] == "1";
+	 const bool bHideWindow = Args[0] == "0";
+
+	 if (bShowWindow) 
+	 {
+		 ShowWindow();
+	 }
+	 else if (bHideWindow)
+	 {
+		 HideWindow();
+	 }
  }
 	
 
@@ -441,6 +489,69 @@ void URuntimeIMDebugsSubsystem::SetFloatFieldValue(const FName InTabID, const FN
 		else
 		{
 			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't set FloatField value the id : '%s' , is not assigned to any FDebugFloatField"),
+				*InID.ToString());
+		}
+	}
+}
+
+void URuntimeIMDebugsSubsystem::AddComboBox(const FName InTabID, const FName InSectionID, const FName InID, const FString& InLabel, const TArray<FString>& InOptions, int InIndex, int InDrawPriority)
+{
+	if (FDebugSection* SelectedSection = GetOrCreateDebugSection(InTabID, InSectionID))
+	{
+		auto FoundComboBox = SelectedSection->ComboBoxes.FindByPredicate([InID](const FDebugComboBox& InComboBox)
+			{ return InComboBox.Field.ID == InID; });
+
+		if (FoundComboBox)
+		{
+			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't add the DebugComboBox %s with id : '%s' , because is already assigned to the DebugComboBox : '%s' ")
+				, *InLabel, *InID.ToString(), *FoundComboBox->Label);
+		}
+		else
+		{
+			FString ComboBoxLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
+			SelectedSection->ComboBoxes.Emplace(InID, ComboBoxLabel, InOptions, InIndex, InDrawPriority);
+		}
+	}
+}
+
+int URuntimeIMDebugsSubsystem::GetComboBoxIndex(const FName InTabID, const FName InSectionID, const FName InID) const
+{
+	if (const FDebugSection* SelectedSection = GetDebugSection(InTabID, InSectionID))
+	{
+		auto FoundComboBox = SelectedSection->ComboBoxes.FindByPredicate([InID](const FDebugComboBox& InComboBox)
+			{ return InComboBox.Field.ID == InID; });
+
+		if (FoundComboBox)
+		{
+			return FoundComboBox->Index;
+		}
+		else
+		{
+			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't get ComboBox indes the id : '%s' , is not assigned to any FDebugComboBox"),
+				*InID.ToString());
+			return -1;
+		}
+	}
+	else
+	{
+		return -1;
+	}
+}
+
+void URuntimeIMDebugsSubsystem::SetComboBoxIndex(const FName InTabID, const FName InSectionID, const FName InID, int InIndex)
+{
+	if (FDebugSection* SelectedSection = GetDebugSection(InTabID, InSectionID))
+	{
+		auto FoundComboBox = SelectedSection->ComboBoxes.FindByPredicate([InID](const FDebugComboBox& InComboBox)
+			{ return InComboBox.Field.ID == InID; });
+
+		if (FoundComboBox)
+		{
+			FoundComboBox->Index = InIndex;
+		}
+		else
+		{
+			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't set ComboBox index the id : '%s' , is not assigned to any FDebugComboBox"),
 				*InID.ToString());
 		}
 	}
