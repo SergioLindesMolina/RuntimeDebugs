@@ -245,7 +245,6 @@ void FRuntimeIMDebugsDockable::RegisterTab()
 	{
 		RuntimeIMWidget = MakeShared<FRuntimeIMDebugsExposed>();
 		RuntimeIMWidget->EnableWidget();
-		HandleWindowCommand(ERuntimeIMDebugWindowCommand::Hide);
 		WindowCommandHandle = URuntimeIMDebugsSubsystem::OnWindowCommand.AddStatic(&FRuntimeIMDebugsDockable::HandleWindowCommand);
 	}
 
