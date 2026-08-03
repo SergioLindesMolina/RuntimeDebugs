@@ -11,6 +11,7 @@ struct FDebugSpinBox;
 struct FDebugFloatField;
 struct FDebugComboBox;
 struct FDebugSection;
+struct FDebugTextField;
 
 enum class ERuntimeIMDebugWindowCommand : uint8;
 
@@ -33,6 +34,8 @@ public:
 	void DrawFloatField(FDebugFloatField& InFloatField, URuntimeIMDebugsSubsystem* InDebugSubsystem);
 
 	void DrawComboBox(FDebugComboBox& InCombobox, URuntimeIMDebugsSubsystem* InDebugSubsystem);
+
+	void DrawTextField(FDebugTextField& InTextField, URuntimeIMDebugsSubsystem* InDebugSubsystem);
 
 	void DrawDebugSection(FDebugSection& InDebugSection, URuntimeIMDebugsSubsystem* InDebugSubsystem);
 

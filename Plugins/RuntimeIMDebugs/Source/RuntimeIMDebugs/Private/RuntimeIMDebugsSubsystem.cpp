@@ -68,22 +68,24 @@ void URuntimeIMDebugsSubsystem::ToggleWindow()
 
 int URuntimeIMDebugsSubsystem::AddTab(const FName InID, const FString& InLabel)
 {
-	auto FoundTabIndex = Tabs.IndexOfByPredicate([InID](const FDebugTab& InTab)
+	FName ResolvedTabID = ResolveTabID(InID);
+
+	auto FoundTabIndex = Tabs.IndexOfByPredicate([ResolvedTabID](const FDebugTab& InTab)
 		{
-			return InTab.ID == InID;
+			return InTab.ID == ResolvedTabID;
 		});
 
 
 	if (FoundTabIndex == INDEX_NONE)
 	{
-		FString TabLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
-		return Tabs.Add(FDebugTab(InID, TabLabel));
+		FString TabLabel = InLabel.IsEmpty() ? ResolvedTabID.ToString() : InLabel;
+		return Tabs.Add(FDebugTab(ResolvedTabID, TabLabel));
 		
 	}
 	else
 	{
 		UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't add DebugTab %s with id %s , because is already assigned to another debug tab : %s ")
-			,*InLabel ,*InID.ToString(), *Tabs[FoundTabIndex].Label);
+			,*InLabel ,*ResolvedTabID.ToString(), *Tabs[FoundTabIndex].Label);
 		return FoundTabIndex;
 	}
 }
@@ -92,12 +94,14 @@ int URuntimeIMDebugsSubsystem::AddDebugSection(const FName InTabID, const FName 
 {
 	if (FDebugTab * SelectedTab = GetTab(InTabID))
 	{
-		auto FoundDebugSectionIndex = SelectedTab->DebugSections.IndexOfByPredicate([InID](const FDebugSection& DebugSection) { return DebugSection.Field.ID == InID; });
+		FName ProcessedSectionID = ResolveDebugSectionID(InID);
+
+		auto FoundDebugSectionIndex = SelectedTab->DebugSections.IndexOfByPredicate([ProcessedSectionID](const FDebugSection& DebugSection) { return DebugSection.Field.ID == ProcessedSectionID; });
 		
 		if (FoundDebugSectionIndex == INDEX_NONE)
 		{
-			FString SectionLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
-			int CreatedDebugSectionIndex = SelectedTab->DebugSections.Emplace(InID, SectionLabel, InDrawPriority);
+			FString SectionLabel = InLabel.IsEmpty() ? ProcessedSectionID.ToString() : InLabel;
+			int CreatedDebugSectionIndex = SelectedTab->DebugSections.Emplace(ProcessedSectionID, SectionLabel, InDrawPriority);
 
 			//Given that tabs only contains one type, DebugSections
 			//Always sort the array after adding a new DebugSection to avoid sorting each frame in the draw window
@@ -132,7 +136,9 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 
  FDebugTab* URuntimeIMDebugsSubsystem::GetTab(const FName InID)
 {
-	 auto FoundTab = Tabs.FindByPredicate([InID](const FDebugTab& InTab) { return InTab.ID == InID; });
+	 FName ResolvedTabID = ResolveTabID(InID);
+
+	 auto FoundTab = Tabs.FindByPredicate([ResolvedTabID](const FDebugTab& InTab) { return InTab.ID == ResolvedTabID; });
 
 	 if (FoundTab) 
 	 {
@@ -148,7 +154,9 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 
  const FDebugTab* URuntimeIMDebugsSubsystem::GetTab(const FName InID) const
  {
-	 auto FoundTab = Tabs.FindByPredicate([InID](const FDebugTab& InTab) { return InTab.ID == InID; });
+	 FName ResolvedTabID = ResolveTabID(InID);
+
+	 auto FoundTab = Tabs.FindByPredicate([ResolvedTabID](const FDebugTab& InTab) { return InTab.ID == ResolvedTabID; });
 
 	 if (FoundTab) 
 	 {
@@ -165,7 +173,9 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
  {
 	 if (FDebugTab* SelectedTab = GetTab(InTabID)) 
 	 {
-		 auto FoundDebugSection = SelectedTab->DebugSections.FindByPredicate([InID](FDebugSection& InDebugSection) { return InDebugSection.Field.ID == InID; });
+		 FName ProcessedSectionID = ResolveDebugSectionID(InID);
+
+		 auto FoundDebugSection = SelectedTab->DebugSections.FindByPredicate([ProcessedSectionID](FDebugSection& InDebugSection) { return InDebugSection.Field.ID == ProcessedSectionID; });
 
 		 return FoundDebugSection;
 	 }
@@ -179,7 +189,9 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
  {
 	 if (InTab)
 	 {
-		 auto FoundDebugSection = InTab->DebugSections.FindByPredicate([InID](const FDebugSection& InDebugSection) { return InDebugSection.Field.ID == InID; });
+		 FName ProcessedSectionID = ResolveDebugSectionID(InID);
+
+		 auto FoundDebugSection = InTab->DebugSections.FindByPredicate([ProcessedSectionID](const FDebugSection& InDebugSection) { return InDebugSection.Field.ID == ProcessedSectionID; });
 
 		 return FoundDebugSection;
 	 }
@@ -193,7 +205,9 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
  {
 	 if (const FDebugTab* SelectedTab = GetTab(InTabID))
 	 {
-		 auto FoundDebugSection = SelectedTab->DebugSections.FindByPredicate([InID](const FDebugSection& InDebugSection) { return InDebugSection.Field.ID == InID; });
+		 FName ProcessedSectionID = ResolveDebugSectionID(InID);
+
+		 auto FoundDebugSection = SelectedTab->DebugSections.FindByPredicate([ProcessedSectionID](const FDebugSection& InDebugSection) { return InDebugSection.Field.ID == ProcessedSectionID; });
 
 		 return FoundDebugSection;
 	 }
@@ -205,17 +219,15 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 
  FDebugTab* URuntimeIMDebugsSubsystem::GetOrCreateTab(const FName InTabID)
  {
-	 FName ResolvedTabID = ResolveTabID(InTabID);
-
 	 //Check if the selected tab exist or if the passed id is empty in which case the default tab will be used
-	 if (FDebugTab* SelectedTab = GetTab(ResolvedTabID))
+	 if (FDebugTab* SelectedTab = GetTab(InTabID))
 	 {	
 		 return SelectedTab;
 	 }
 	 else
 	 {
 		 //If the selected tab does not exist we create the tab
-		 int CreatedTabIndex = AddTab(ResolvedTabID, ResolvedTabID.ToString());
+		 int CreatedTabIndex = AddTab(InTabID, InTabID.ToString());
 		 return &Tabs[CreatedTabIndex];
 	 }
  }
@@ -229,18 +241,16 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 		return nullptr;
 	 }
 	 
-	 FName ProcessedTabID = ResolveTabID(InTabID);
-	 FName ProcessedSectionID = ResolveDebugSectionID(InSectionID);
 
 
 	 //Check if the selected Debug section exist or if the passed debug section id is empty in wich case the default section will be used 
-	 if (FDebugSection* SelectedSection =  GetDebugSection(SelectedTab, ProcessedSectionID))
+	 if (FDebugSection* SelectedSection =  GetDebugSection(SelectedTab, InSectionID))
 	 {
 		 return SelectedSection;
 	 }
 	 else
 	 {
-		 int CreatedSectionIndex = AddDebugSection(ProcessedTabID, ProcessedSectionID);
+		 int CreatedSectionIndex = AddDebugSection(InTabID, InSectionID);
 		 return &SelectedTab->DebugSections[CreatedSectionIndex];
 	 }
  }
@@ -552,6 +562,69 @@ void URuntimeIMDebugsSubsystem::SetComboBoxIndex(const FName InTabID, const FNam
 		else
 		{
 			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't set ComboBox index the id : '%s' , is not assigned to any FDebugComboBox"),
+				*InID.ToString());
+		}
+	}
+}
+
+void URuntimeIMDebugsSubsystem::AddText(const FName InTabID, const FName InSectionID, const FName InID, const FString& InLabel, const FString& InText, int InDrawPriority)
+{
+	if (FDebugSection* SelectedSection = GetOrCreateDebugSection(InTabID, InSectionID))
+	{
+		auto FoundTextField = SelectedSection->TextFields.FindByPredicate([InID](const FDebugTextField& InTextField)
+			{ return InTextField.Field.ID == InID; });
+
+		if (FoundTextField)
+		{
+			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't add the DebugTextField %s with id : '%s' , because is already assigned to the DebugTextField : '%s' ")
+				, *InLabel, *InID.ToString(), *FoundTextField->Label);
+		}
+		else
+		{
+			FString TextFieldLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
+			SelectedSection->TextFields.Emplace(InID, TextFieldLabel, InText, InDrawPriority);
+		}
+	}
+}
+
+FString URuntimeIMDebugsSubsystem::GetText(const FName InTabID, const FName InSectionID, const FName InID) const
+{
+	if (const FDebugSection* SelectedSection = GetDebugSection(InTabID, InSectionID))
+	{
+		auto FoundTextField = SelectedSection->TextFields.FindByPredicate([InID](const FDebugTextField& InTextField)
+			{ return InTextField.Field.ID == InID; });
+
+		if (FoundTextField)
+		{
+			return FoundTextField->Text;
+		}
+		else
+		{
+			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't get TextField indes the id : '%s' , is not assigned to any FDebugTextField"),
+				*InID.ToString());
+			return "";
+		}
+	}
+	else
+	{
+		return "";
+	}
+}
+
+void URuntimeIMDebugsSubsystem::SetText(const FName InTabID, const FName InSectionID, const FName InID, const FString& InText)
+{
+	if (FDebugSection* SelectedSection = GetDebugSection(InTabID, InSectionID))
+	{
+		auto FoundTextField = SelectedSection->TextFields.FindByPredicate([InID](const FDebugTextField& InTextField)
+			{ return InTextField.Field.ID == InID; });
+
+		if (FoundTextField)
+		{
+			FoundTextField->Text = InText;
+		}
+		else
+		{
+			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't set TextField index the id : '%s' , is not assigned to any FDebugTextField"),
 				*InID.ToString());
 		}
 	}

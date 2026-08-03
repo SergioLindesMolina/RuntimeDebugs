@@ -103,6 +103,14 @@ void FRuntimeIMDebugsExposed::DrawComboBox(FDebugComboBox& InComboBox, URuntimeI
 	SlateIM::EndHorizontalStack();
 }
 
+void FRuntimeIMDebugsExposed::DrawTextField(FDebugTextField& InTextField, URuntimeIMDebugsSubsystem* InDebugSubsystem)
+{
+	SlateIM::BeginHorizontalStack();
+	SlateIM::Text(InTextField.Label);
+	SlateIM::Text(InTextField.Text);
+	SlateIM::EndHorizontalStack();
+}
+
 void FRuntimeIMDebugsExposed::DrawDebugSection(FDebugSection& InDebugSection, URuntimeIMDebugsSubsystem* InDebugSubsystem)
 {	
 	const URuntimeIMDebugsSettings* Settings = GetDefault<URuntimeIMDebugsSettings>();
@@ -132,7 +140,6 @@ void FRuntimeIMDebugsExposed::DrawDebugSection(FDebugSection& InDebugSection, UR
 
 	TArray<FDebugFieldDrawListEntry> DrawEntries;
 
-
 	for (FDebugFloatField& FloatField : InDebugSection.FloatFields)
 	{
 		DrawEntries.Add(FDebugFieldDrawListEntry(FloatField.Field.DrawPriority, [this, &FloatField, InDebugSubsystem]()
@@ -149,6 +156,13 @@ void FRuntimeIMDebugsExposed::DrawDebugSection(FDebugSection& InDebugSection, UR
 			}));
 	}
 
+	for (FDebugTextField& TextField : InDebugSection.TextFields)
+	{
+		DrawEntries.Add(FDebugFieldDrawListEntry(TextField.Field.DrawPriority, [this, &TextField, InDebugSubsystem]()
+			{
+				DrawTextField(TextField, InDebugSubsystem);
+			}));
+	}
 
 	for (FDebugToggle& Toggle : InDebugSection.Toggles)
 	{

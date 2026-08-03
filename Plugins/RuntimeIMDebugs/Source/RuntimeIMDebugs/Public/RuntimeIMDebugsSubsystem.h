@@ -65,6 +65,35 @@ struct FDebugField
 };
 
 USTRUCT(BlueprintType)
+struct FDebugTextField 
+{
+    GENERATED_BODY()
+
+    FDebugTextField()
+        : Field(NAME_None, 0)
+        , Label("")
+        , Text("")
+    {
+    }
+
+    FDebugTextField(FName InID, const FString& InLable, const FString& InText, int InDrawPriority)
+        : Field(InID, InDrawPriority)
+        , Label(InLable)
+        , Text(InText)
+    {
+    }
+
+    UPROPERTY(BlueprintReadOnly, Category = "DebugTextField")
+    FDebugField Field;
+
+    UPROPERTY(BlueprintReadOnly, Category = "DebugTextField")
+    FString Label;
+
+    UPROPERTY(BlueprintReadOnly, Category = "DebugTextField")
+    FString Text;
+};
+
+USTRUCT(BlueprintType)
 struct FDebugFloatField 
 {
     GENERATED_BODY()
@@ -260,6 +289,8 @@ struct FDebugSection
     TArray<FDebugFloatField> FloatFields;
     UPROPERTY(BlueprintReadOnly, Category = "DebugSection")
     TArray<FDebugComboBox> ComboBoxes;
+    UPROPERTY(BlueprintReadOnly, Category = "DebugSection")
+    TArray<FDebugTextField> TextFields;
 
 };
 
@@ -352,12 +383,19 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     void AddComboBox(const FName InTabID, const FName InSectionID, const FName InID, const FString& InLabel, const TArray<FString>& InOptions, int InIndex = 0, int InDrawPriority = 0);
-
     UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     int GetComboBoxIndex(const FName InTabID, const FName InSectionID, const FName InID) const;
-
     UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     void SetComboBoxIndex(const FName InTabID, const FName InSectionID, const FName InID, int InIndex);
+
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
+    void AddText(const FName InTabID, const FName InSectionID, const FName InID, const FString& InLabel = TEXT(""), const FString& InText = "", int InDrawPriority = 0);
+
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
+    FString GetText(const FName InTabID, const FName InSectionID, const FName InID) const;
+
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
+    void SetText(const FName InTabID, const FName InSectionID, const FName InID, const FString& InText);
 
 
     UPROPERTY(BlueprintAssignable, Category = "RuntimeDebugsSubsystem")
