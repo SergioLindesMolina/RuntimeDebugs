@@ -18,7 +18,7 @@ void FRuntimeIMDebugsExposed::DrawContent(float DeltaTime)
 	SlateIM::VAlign(VAlign_Fill);
 	SlateIM::BeginTabGroup(TEXT("DebugSections"));
 	SlateIM::BeginTabStack();
-
+	
 	UWorld* World = nullptr;
 
 	for (const FWorldContext& Context : GEngine->GetWorldContexts())
@@ -32,7 +32,7 @@ void FRuntimeIMDebugsExposed::DrawContent(float DeltaTime)
 
 	if (World) 
 	{
-		if (URuntimeIMDebugsSubsystem* DebugSubsystem = World->GetGameInstance()->GetSubsystem<URuntimeIMDebugsSubsystem>())
+		if (URuntimeIMDebugsSubsystem* DebugSubsystem = World->GetSubsystem<URuntimeIMDebugsSubsystem>())
 		{
 			TArray<FDebugTab>& TabsToDraw = DebugSubsystem->GetTabs();
 
@@ -246,13 +246,11 @@ void FRuntimeIMDebugsDockable::RegisterTab()
 
 	if (!TabManager->HasTabSpawner(TabId)) 
 	{
-
 		TabManager->RegisterNomadTabSpawner(
 			TabId,
 			FOnSpawnTab::CreateStatic(&FRuntimeIMDebugsDockable::SpawnTab))
 			.SetDisplayName(NSLOCTEXT("RuntimeDebugsWindow", "RuntimeDebugsWindowTab", "RuntimeDebugsWindow"))
 			.SetMenuType(ETabSpawnerMenuType::Hidden);
-
 	}
 
 	if (!RuntimeIMWidget.IsValid())
@@ -262,6 +260,14 @@ void FRuntimeIMDebugsDockable::RegisterTab()
 		WindowCommandHandle = URuntimeIMDebugsSubsystem::OnWindowCommand.AddStatic(&FRuntimeIMDebugsDockable::HandleWindowCommand);
 	}
 
+	
+	TSharedPtr<SDockTab> DockTab = FGlobalTabmanager::Get()->TryInvokeTab(FRuntimeIMDebugsDockable::GetTabId());
+
+	if (DockTab.IsValid()) 
+	{
+		DockTab->RequestCloseTab();
+	}
+
 }
 
 void FRuntimeIMDebugsDockable::UnregisterTab()
@@ -269,13 +275,11 @@ void FRuntimeIMDebugsDockable::UnregisterTab()
 	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
 	if (TabManager->HasTabSpawner(TabId)) 
 	{
-
 		TabManager->UnregisterNomadTabSpawner(TabId);
 	}
 
 	if (RuntimeIMWidget.IsValid())
 	{
-		//URuntimeIMDebugsSubsystem::OnWindowCommand.Remove(WindowCommandHandle);
 		//This causes a crash when the editor is closing - TODO Find the root reason
 		//RuntimeIMWidget->DisableWidget();
 		
@@ -284,6 +288,20 @@ void FRuntimeIMDebugsDockable::UnregisterTab()
 		RuntimeIMWidget.Reset();
 	}
 
+}
+
+void FRuntimeIMDebugsDockable::RecreateWidget()
+{
+	RuntimeIMWidget.Reset();
+
+	RuntimeIMWidget = MakeShared<FRuntimeIMDebugsExposed>();
+	RuntimeIMWidget->EnableWidget();
+
+	if (TSharedPtr<SDockTab> DockTab =
+		FGlobalTabmanager::Get()->FindExistingLiveTab(TabId))
+	{
+		DockTab->SetContent(RuntimeIMWidget->GetExposedWidget());
+	}
 }
 
 void FRuntimeIMDebugsDockable::HandleWindowCommand(ERuntimeIMDebugWindowCommand InCommand)
@@ -299,7 +317,7 @@ void FRuntimeIMDebugsDockable::HandleWindowCommand(ERuntimeIMDebugWindowCommand 
 		break;
 	case ERuntimeIMDebugWindowCommand::Hide:
 
-		 DockTab = FGlobalTabmanager::Get()->FindExistingLiveTab(FRuntimeIMDebugsDockable::GetTabId());
+		 DockTab = FGlobalTabmanager::Get()->TryInvokeTab(FRuntimeIMDebugsDockable::GetTabId());
 		
 		if (DockTab.IsValid())
 		{
@@ -309,11 +327,12 @@ void FRuntimeIMDebugsDockable::HandleWindowCommand(ERuntimeIMDebugWindowCommand 
 		break;
 	case ERuntimeIMDebugWindowCommand::Toggle:
 
-		DockTab = FGlobalTabmanager::Get()->FindExistingLiveTab(FRuntimeIMDebugsDockable::GetTabId());
-		
+		//TODO FIX THIS IT NEADS ANOTHER WAY OF KNOWING IF IS VISIBLE A CUSTOM PROPERTY WOULD BE EASIER
+		DockTab = FGlobalTabmanager::Get()->TryInvokeTab(FRuntimeIMDebugsDockable::GetTabId());
+
 		if (DockTab.IsValid())
 		{
-			DockTab->RequestCloseTab();
+			bool CanBeClosed = DockTab->RequestCloseTab();			
 		}
 		else
 		{

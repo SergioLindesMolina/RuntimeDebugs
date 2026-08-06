@@ -49,6 +49,7 @@ class FRuntimeIMDebugsDockable
 public:
 	static void RegisterTab();
 	static void UnregisterTab();
+	static void RecreateWidget();
 	static void HandleWindowCommand(ERuntimeIMDebugWindowCommand InCommand);
 	static TSharedPtr<FRuntimeIMDebugsExposed> GetRuntimeIMWidget();
 	static const FName GetTabId();

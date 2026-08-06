@@ -3,7 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Subsystems/GameInstanceSubsystem.h"
+//#include "Subsystems/GameInstanceSubsystem.h"
+#include "Subsystems/WorldSubsystem.h"
 #include "RuntimeIMDebugsSubsystem.generated.h"
 
 
@@ -326,7 +327,7 @@ struct FDebugTab
  * 
  */
 UCLASS()
-class RUNTIMEIMDEBUGS_API URuntimeIMDebugsSubsystem : public UGameInstanceSubsystem
+class RUNTIMEIMDEBUGS_API URuntimeIMDebugsSubsystem : public UWorldSubsystem
 {
 	GENERATED_BODY()
 

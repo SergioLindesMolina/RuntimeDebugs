@@ -16,4 +16,10 @@ public:
 	virtual void ShutdownModule() override;
 
 	FRuntimeIMDebugsExposed* RuntimeDebugWindow;
+
+private:
+
+	void OnPostWorldInitialization(const FActorsInitializedParams& InitializationParams);
+
+	FDelegateHandle WorldInitializationHandle;
 };

@@ -11,14 +11,17 @@ void URuntimeIMDebugsSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	Super::Initialize(Collection);
 
 	//Register Console Command
-	ShowWindowConsoleCommand = IConsoleManager::Get().RegisterConsoleCommand(
-		TEXT("RuntimeIMDebugs.ShowWindow"),
-		TEXT("Shows or hides the RuntimeIMDebugs window. 0 = Hide, 1 = Show. NoArgument = Toggle"),
-		FConsoleCommandWithArgsDelegate::CreateUObject(
-			this,
-			&URuntimeIMDebugsSubsystem::HandleShowWindowConsoleCommand),
-		ECVF_Default
-	);
+	if (!IConsoleManager::Get().IsNameRegistered(TEXT("RuntimeIMDebugs.ShowWindow"))) 
+	{
+		ShowWindowConsoleCommand = IConsoleManager::Get().RegisterConsoleCommand(
+			TEXT("RuntimeIMDebugs.ShowWindow"),
+			TEXT("Shows or hides the RuntimeIMDebugs window. 0 = Hide, 1 = Show. NoArgument = Toggle"),
+			FConsoleCommandWithArgsDelegate::CreateUObject(
+				this,
+				&URuntimeIMDebugsSubsystem::HandleShowWindowConsoleCommand),
+			ECVF_Default
+		);
+	}
 
 	//Initialize the Default tab and Default Section
 	const URuntimeIMDebugsSettings* Settings = GetDefault<URuntimeIMDebugsSettings>();
@@ -35,7 +38,7 @@ void URuntimeIMDebugsSubsystem::Deinitialize()
 {
 	Tabs.Empty();
 	
-	//Unregister the console command
+	//Unregister the console command TODO: Move this code to the module maybe??
 	if (ShowWindowConsoleCommand) 
 	{
 		IConsoleManager::Get().UnregisterConsoleObject(ShowWindowConsoleCommand);
