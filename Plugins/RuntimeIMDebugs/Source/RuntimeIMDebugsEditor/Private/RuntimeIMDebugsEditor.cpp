@@ -10,6 +10,8 @@ void FRuntimeIMDebugsModuleEditor::StartupModule()
 	FRuntimeIMDebugsDockable::RegisterTab();
 
 	WorldInitializationHandle = FWorldDelegates::OnWorldInitializedActors.AddRaw(this,	&FRuntimeIMDebugsModuleEditor::OnPostWorldInitialization);
+	EditorInitializationHandle = FEditorDelegates::OnEditorInitialized.AddRaw(this,	&FRuntimeIMDebugsModuleEditor::OnEditorInitialized);
+	FEditorDelegates::StartPIE.AddRaw(this, &FRuntimeIMDebugsModuleEditor::OnStartPIE);
 }
 
 void FRuntimeIMDebugsModuleEditor::ShutdownModule()
@@ -17,6 +19,9 @@ void FRuntimeIMDebugsModuleEditor::ShutdownModule()
 
 	if(WorldInitializationHandle.IsValid())
 		FWorldDelegates::OnPostWorldInitialization.Remove(WorldInitializationHandle);
+
+	if (EditorInitializationHandle.IsValid())
+		FEditorDelegates::OnEditorInitialized.Remove(EditorInitializationHandle);
 
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
@@ -30,6 +35,17 @@ void FRuntimeIMDebugsModuleEditor::OnPostWorldInitialization(const FActorsInitia
 
 	FRuntimeIMDebugsDockable::RecreateWidget();
 	
+}
+
+void FRuntimeIMDebugsModuleEditor::OnEditorInitialized(double Duration)
+{
+	FRuntimeIMDebugsDockable::OnEditorFinishInitialization();
+}
+
+void FRuntimeIMDebugsModuleEditor::OnStartPIE(const bool InIsSimulating)
+{
+	FRuntimeIMDebugsDockable::OnStartPIE();
+
 }
 	
 IMPLEMENT_MODULE(FRuntimeIMDebugsModuleEditor, RuntimeIMDebugsEditor)

@@ -243,7 +243,6 @@ void FRuntimeIMDebugsDockable::RegisterTab()
 {
 	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
 
-
 	if (!TabManager->HasTabSpawner(TabId)) 
 	{
 		TabManager->RegisterNomadTabSpawner(
@@ -259,15 +258,6 @@ void FRuntimeIMDebugsDockable::RegisterTab()
 		RuntimeIMWidget->EnableWidget();
 		WindowCommandHandle = URuntimeIMDebugsSubsystem::OnWindowCommand.AddStatic(&FRuntimeIMDebugsDockable::HandleWindowCommand);
 	}
-
-	
-	TSharedPtr<SDockTab> DockTab = FGlobalTabmanager::Get()->TryInvokeTab(FRuntimeIMDebugsDockable::GetTabId());
-
-	if (DockTab.IsValid()) 
-	{
-		DockTab->RequestCloseTab();
-	}
-
 }
 
 void FRuntimeIMDebugsDockable::UnregisterTab()
@@ -301,6 +291,75 @@ void FRuntimeIMDebugsDockable::RecreateWidget()
 		FGlobalTabmanager::Get()->FindExistingLiveTab(TabId))
 	{
 		DockTab->SetContent(RuntimeIMWidget->GetExposedWidget());
+	}
+}
+
+void FRuntimeIMDebugsDockable::OnEditorFinishInitialization()
+{
+	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
+	
+	if (RuntimeTab.IsValid()) 
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Tab pointer is valid"));
+
+		RuntimeTab.Pin()->FlashTab();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Tab pointer is not valid"));
+	}
+
+	if (TabManager->HasTabSpawner(TabId)) 
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Tab spawner exist"));
+
+		TSharedPtr<FTabSpawnerEntry> TabSpawner = TabManager->FindTabSpawnerFor(TabId);
+		FString SpawnerName = TabSpawner->GetDisplayName().ToString();
+
+		TArray<TSharedRef<FWorkspaceItem>> ChildItems = TabSpawner->GetChildItems();
+
+		for (TSharedRef<FWorkspaceItem> Item : ChildItems) 
+		{
+			FString ItemName = Item->GetDisplayName().ToString();
+			UE_LOG(LogTemp, Warning, TEXT("Item name %s"), *ItemName);
+		}
+
+		TArray<TWeakPtr<FTabSpawnerEntry>> AllowedSpawners;
+
+		if (TabSpawner->HasChildrenIn(AllowedSpawners)) 
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Have Children"));
+		}
+
+		if (TabSpawner->IsHidden()) 
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Is hidden"));
+		}
+
+		if (TabSpawner->IsTabLocked()) 
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Is locked"));
+		}
+
+		FString TabTypeName = TabSpawner->GetTabType().ToString();
+
+		UE_LOG(LogTemp, Warning, TEXT("Tab spawner name %s"), *SpawnerName);
+		UE_LOG(LogTemp, Warning, TEXT("Tab spawner type %s"), *TabTypeName);
+	}
+
+	
+
+}
+
+void FRuntimeIMDebugsDockable::OnStartPIE()
+{
+	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
+
+	TSharedPtr<SDockTab> LiveTab = TabManager->FindExistingLiveTab(TabId);
+
+	if (LiveTab.IsValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("LIVE TAB exist"));
 	}
 }
 
@@ -350,10 +409,14 @@ TSharedRef<SDockTab> FRuntimeIMDebugsDockable::SpawnTab(const FSpawnTabArgs& Arg
 {
 	check(RuntimeIMWidget.IsValid());
 
-	return SNew(SDockTab)
+	TSharedRef<SDockTab> Tab = SNew(SDockTab)
 		.TabRole(ETabRole::NomadTab)
 		[
 			RuntimeIMWidget->GetExposedWidget()
 		];
+
+	RuntimeTab = Tab;
+
+	return Tab;
 }
 

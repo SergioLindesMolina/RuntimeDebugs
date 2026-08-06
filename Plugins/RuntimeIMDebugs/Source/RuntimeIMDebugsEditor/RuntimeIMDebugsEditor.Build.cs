@@ -38,6 +38,7 @@ public class RuntimeIMDebugsEditor : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"UnrealEd"
 			}
 			);
 		
