@@ -47,14 +47,13 @@ public:
 class FRuntimeIMDebugsDockable 
 {
 public:
+
 	static void RegisterTab();
 
 	static void UnregisterTab();
 	
 	static void RecreateWidget();
 	
-	static void OnEditorFinishInitialization();
-
 	static void OnStartPIE();
 
 	static void HandleWindowCommand(ERuntimeIMDebugWindowCommand InCommand);
@@ -65,11 +64,13 @@ public:
 
 private:
 
-	static TSharedPtr<FRuntimeIMDebugsExposed> RuntimeIMWidget;
 	static TSharedRef<SDockTab> SpawnTab(const FSpawnTabArgs& Args);
+	
 	static const FName TabId;
-
+	
 	inline static FDelegateHandle WindowCommandHandle;
+
+	inline static TSharedPtr<FRuntimeIMDebugsExposed> RuntimeIMWidget = nullptr;
 
 	inline static TWeakPtr<SDockTab> RuntimeTab;
 

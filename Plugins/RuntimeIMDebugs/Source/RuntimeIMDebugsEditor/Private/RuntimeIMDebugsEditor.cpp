@@ -10,8 +10,7 @@ void FRuntimeIMDebugsModuleEditor::StartupModule()
 	FRuntimeIMDebugsDockable::RegisterTab();
 
 	WorldInitializationHandle = FWorldDelegates::OnWorldInitializedActors.AddRaw(this,	&FRuntimeIMDebugsModuleEditor::OnPostWorldInitialization);
-	EditorInitializationHandle = FEditorDelegates::OnEditorInitialized.AddRaw(this,	&FRuntimeIMDebugsModuleEditor::OnEditorInitialized);
-	FEditorDelegates::StartPIE.AddRaw(this, &FRuntimeIMDebugsModuleEditor::OnStartPIE);
+	StartPIEHandle = FEditorDelegates::StartPIE.AddRaw(this, &FRuntimeIMDebugsModuleEditor::OnStartPIE);
 }
 
 void FRuntimeIMDebugsModuleEditor::ShutdownModule()
@@ -19,9 +18,10 @@ void FRuntimeIMDebugsModuleEditor::ShutdownModule()
 
 	if(WorldInitializationHandle.IsValid())
 		FWorldDelegates::OnPostWorldInitialization.Remove(WorldInitializationHandle);
+	
+	if (StartPIEHandle.IsValid())
+		FEditorDelegates::StartPIE.Remove(StartPIEHandle);
 
-	if (EditorInitializationHandle.IsValid())
-		FEditorDelegates::OnEditorInitialized.Remove(EditorInitializationHandle);
 
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
@@ -31,15 +31,10 @@ void FRuntimeIMDebugsModuleEditor::ShutdownModule()
 
 void FRuntimeIMDebugsModuleEditor::OnPostWorldInitialization(const FActorsInitializedParams& InitializationParams)
 {
-	UE_LOG(LogTemp, Warning, TEXT("On post world initialization called"));
+	UE_LOG(LogTemp, Warning, TEXT("On post world initialization called re-make the full widget to avoid dangling tabs"));
 
 	FRuntimeIMDebugsDockable::RecreateWidget();
 	
-}
-
-void FRuntimeIMDebugsModuleEditor::OnEditorInitialized(double Duration)
-{
-	FRuntimeIMDebugsDockable::OnEditorFinishInitialization();
 }
 
 void FRuntimeIMDebugsModuleEditor::OnStartPIE(const bool InIsSimulating)

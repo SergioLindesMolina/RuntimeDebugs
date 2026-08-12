@@ -20,9 +20,8 @@ public:
 private:
 
 	void OnPostWorldInitialization(const FActorsInitializedParams& InitializationParams);
-	void OnEditorInitialized(double Duration);
 	void OnStartPIE(const bool InIsSimulating);
 
 	FDelegateHandle WorldInitializationHandle;
-	FDelegateHandle EditorInitializationHandle;
+	FDelegateHandle StartPIEHandle;
 };

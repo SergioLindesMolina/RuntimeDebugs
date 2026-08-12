@@ -223,9 +223,7 @@ void FRuntimeIMDebugsExposed::DrawTab(FDebugTab& InTab, URuntimeIMDebugsSubsyste
 	SlateIM::EndTab();
 }
 
-/*Static variables of FTraeIMDebugExposed initialization of the shared pointer and the fname */
-
-TSharedPtr<FRuntimeIMDebugsExposed> FRuntimeIMDebugsDockable::RuntimeIMWidget = nullptr;
+/*Static variables of FTraeIMDebugExposed initialization of the FName */
 
 const FName FRuntimeIMDebugsDockable::TabId(TEXT("RuntimeDebugWindow"));
 
@@ -287,6 +285,7 @@ void FRuntimeIMDebugsDockable::RecreateWidget()
 	RuntimeIMWidget = MakeShared<FRuntimeIMDebugsExposed>();
 	RuntimeIMWidget->EnableWidget();
 
+	//TODO USE THE ALREADY VALID WEAK POINTER
 	if (TSharedPtr<SDockTab> DockTab =
 		FGlobalTabmanager::Get()->FindExistingLiveTab(TabId))
 	{
@@ -294,72 +293,26 @@ void FRuntimeIMDebugsDockable::RecreateWidget()
 	}
 }
 
-void FRuntimeIMDebugsDockable::OnEditorFinishInitialization()
-{
-	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
-	
-	if (RuntimeTab.IsValid()) 
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Tab pointer is valid"));
-
-		RuntimeTab.Pin()->FlashTab();
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Tab pointer is not valid"));
-	}
-
-	if (TabManager->HasTabSpawner(TabId)) 
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Tab spawner exist"));
-
-		TSharedPtr<FTabSpawnerEntry> TabSpawner = TabManager->FindTabSpawnerFor(TabId);
-		FString SpawnerName = TabSpawner->GetDisplayName().ToString();
-
-		TArray<TSharedRef<FWorkspaceItem>> ChildItems = TabSpawner->GetChildItems();
-
-		for (TSharedRef<FWorkspaceItem> Item : ChildItems) 
-		{
-			FString ItemName = Item->GetDisplayName().ToString();
-			UE_LOG(LogTemp, Warning, TEXT("Item name %s"), *ItemName);
-		}
-
-		TArray<TWeakPtr<FTabSpawnerEntry>> AllowedSpawners;
-
-		if (TabSpawner->HasChildrenIn(AllowedSpawners)) 
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Have Children"));
-		}
-
-		if (TabSpawner->IsHidden()) 
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Is hidden"));
-		}
-
-		if (TabSpawner->IsTabLocked()) 
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Is locked"));
-		}
-
-		FString TabTypeName = TabSpawner->GetTabType().ToString();
-
-		UE_LOG(LogTemp, Warning, TEXT("Tab spawner name %s"), *SpawnerName);
-		UE_LOG(LogTemp, Warning, TEXT("Tab spawner type %s"), *TabTypeName);
-	}
-
-	
-
-}
-
 void FRuntimeIMDebugsDockable::OnStartPIE()
 {
 	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
 
-	TSharedPtr<SDockTab> LiveTab = TabManager->FindExistingLiveTab(TabId);
-
-	if (LiveTab.IsValid())
+	if (RuntimeTab.IsValid())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("LIVE TAB exist"));
+		UE_LOG(LogTemp, Warning, TEXT("Weak pointer to runtime tab is  valid on pie"));
+						
+		TSharedRef<SWidget> CurrentRuntimeTabContent = RuntimeTab.Pin()->GetContent();
+
+		UE_LOG(LogTemp, Warning, TEXT("ContentTab type: %s"), *CurrentRuntimeTabContent->GetType().ToString());
+
+		check(RuntimeIMWidget.IsValid());
+
+		if (CurrentRuntimeTabContent->GetType() != RuntimeIMWidget->GetExposedWidget()->GetType())
+		{
+			RuntimeTab.Pin()->SetContent(RuntimeIMWidget->GetExposedWidget());
+			UE_LOG(LogTemp, Warning, TEXT("Changed content for the tab ") );
+		}
+
 	}
 }
 
