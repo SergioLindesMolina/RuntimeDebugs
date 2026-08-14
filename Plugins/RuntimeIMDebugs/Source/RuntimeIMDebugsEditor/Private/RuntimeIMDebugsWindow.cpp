@@ -2,6 +2,7 @@
 #include "RuntimeIMDebugsWindow.h"
 #include "RuntimeIMDebugsSubsystem.h"
 #include "RuntimeIMDebugsSettings.h"
+#include "RuntimeIMDebugsLog.h"
 
 #include "Engine.h"
 
@@ -223,6 +224,12 @@ void FRuntimeIMDebugsExposed::DrawTab(FDebugTab& InTab, URuntimeIMDebugsSubsyste
 	SlateIM::EndTab();
 }
 
+////
+// 
+// FRuntimeIMDebugsDockable
+//
+///
+
 /*Static variables of FTraeIMDebugExposed initialization of the FName */
 
 const FName FRuntimeIMDebugsDockable::TabId(TEXT("RuntimeDebugWindow"));
@@ -237,6 +244,10 @@ const FName FRuntimeIMDebugsDockable::GetTabId()
 	return TabId;
 }
 
+// When the engine module starts, this function is called to register the tab spawner
+// with the global tab manager and create an instance of FRuntimeIMDebugsExposed,
+// which contains the widget used for debugging. It also registers the command
+// used to show and hide the widget.
 void FRuntimeIMDebugsDockable::RegisterTab()
 {
 	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
@@ -254,10 +265,13 @@ void FRuntimeIMDebugsDockable::RegisterTab()
 	{
 		RuntimeIMWidget = MakeShared<FRuntimeIMDebugsExposed>();
 		RuntimeIMWidget->EnableWidget();
+
 		WindowCommandHandle = URuntimeIMDebugsSubsystem::OnWindowCommand.AddStatic(&FRuntimeIMDebugsDockable::HandleWindowCommand);
 	}
 }
 
+// When the module is shutting down, the tab spawner is unregistered from the global tab manager,
+// and RuntimeIMWidget is reset to release the widget. The command is also unregistered.
 void FRuntimeIMDebugsDockable::UnregisterTab()
 {
 	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
@@ -284,78 +298,88 @@ void FRuntimeIMDebugsDockable::RecreateWidget()
 
 	RuntimeIMWidget = MakeShared<FRuntimeIMDebugsExposed>();
 	RuntimeIMWidget->EnableWidget();
-
-	//TODO USE THE ALREADY VALID WEAK POINTER
-	if (TSharedPtr<SDockTab> DockTab =
-		FGlobalTabmanager::Get()->FindExistingLiveTab(TabId))
-	{
-		DockTab->SetContent(RuntimeIMWidget->GetExposedWidget());
-	}
 }
+
 
 void FRuntimeIMDebugsDockable::OnStartPIE()
 {
-	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
-
-	if (RuntimeTab.IsValid())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Weak pointer to runtime tab is  valid on pie"));
-						
-		TSharedRef<SWidget> CurrentRuntimeTabContent = RuntimeTab.Pin()->GetContent();
-
-		UE_LOG(LogTemp, Warning, TEXT("ContentTab type: %s"), *CurrentRuntimeTabContent->GetType().ToString());
-
-		check(RuntimeIMWidget.IsValid());
-
-		if (CurrentRuntimeTabContent->GetType() != RuntimeIMWidget->GetExposedWidget()->GetType())
-		{
-			RuntimeTab.Pin()->SetContent(RuntimeIMWidget->GetExposedWidget());
-			UE_LOG(LogTemp, Warning, TEXT("Changed content for the tab ") );
-		}
-
-	}
+	TryToReasignWidgetAsContentToTab();
 }
 
 void FRuntimeIMDebugsDockable::HandleWindowCommand(ERuntimeIMDebugWindowCommand InCommand)
 {
-	TSharedPtr<SDockTab> DockTab;
-
 	switch (InCommand)
 	{
 	case ERuntimeIMDebugWindowCommand::Show:
 		
-		FGlobalTabmanager::Get()->TryInvokeTab(FRuntimeIMDebugsDockable::GetTabId());
+		TryInvokeTab();
 		
 		break;
 	case ERuntimeIMDebugWindowCommand::Hide:
 
-		 DockTab = FGlobalTabmanager::Get()->TryInvokeTab(FRuntimeIMDebugsDockable::GetTabId());
-		
-		if (DockTab.IsValid())
-		{
-			DockTab->RequestCloseTab();
-		}
+		RequestCloseTab();
 
 		break;
 	case ERuntimeIMDebugWindowCommand::Toggle:
 
-		//TODO FIX THIS IT NEADS ANOTHER WAY OF KNOWING IF IS VISIBLE A CUSTOM PROPERTY WOULD BE EASIER
-		DockTab = FGlobalTabmanager::Get()->TryInvokeTab(FRuntimeIMDebugsDockable::GetTabId());
-
-		if (DockTab.IsValid())
-		{
-			bool CanBeClosed = DockTab->RequestCloseTab();			
-		}
-		else
-		{
-			FGlobalTabmanager::Get()->TryInvokeTab(FRuntimeIMDebugsDockable::GetTabId());
-		}
+		ToggleTab();
 
 		break;
 	default:
 		break;
 	}
 
+}
+
+// When a PIE session is started, if the current tab content is not assigned to the widget
+// created by the plugin (FRuntimeIMDebugsExposed), this function changes the content of the
+// SDockTab used by the plugin to point to the correct widget. This can happen when the engine
+// is closed while the tab is still attached, and the engine is opened again with the tab
+// already existing. 
+void FRuntimeIMDebugsDockable::TryToReasignWidgetAsContentToTab()
+{
+	if (RuntimeIMTab.IsValid() && RuntimeIMTab.Pin().IsValid())
+	{
+		//UE_LOG(LogRuntimeIMDebugs, Warning, TEXT("Weak pointer to runtime tab is  valid on pie"));
+
+		TSharedRef<SWidget> CurrentRuntimeTabContent = RuntimeIMTab.Pin()->GetContent();
+
+		//UE_LOG(LogRuntimeIMDebugs, Warning, TEXT("ContentTab type: %s"), *CurrentRuntimeTabContent->GetType().ToString());
+
+		check(RuntimeIMWidget.IsValid());
+
+		if (CurrentRuntimeTabContent->GetType() != RuntimeIMWidget->GetExposedWidget()->GetType())
+		{
+			RuntimeIMTab.Pin()->SetContent(RuntimeIMWidget->GetExposedWidget());
+		}
+
+	}
+}
+
+void FRuntimeIMDebugsDockable::TryInvokeTab() 
+{
+	FGlobalTabmanager::Get()->TryInvokeTab(FRuntimeIMDebugsDockable::GetTabId());
+
+}
+
+void FRuntimeIMDebugsDockable::RequestCloseTab()
+{
+	if (RuntimeIMTab.IsValid() && RuntimeIMTab.Pin().IsValid())
+	{
+		RuntimeIMTab.Pin()->RequestCloseTab();
+	}
+}
+
+void FRuntimeIMDebugsDockable::ToggleTab()
+{
+	if (RuntimeIMTab.IsValid() && RuntimeIMTab.Pin().IsValid())
+	{
+		RequestCloseTab();
+	}
+	else
+	{
+		TryInvokeTab();
+	}
 }
 
 TSharedRef<SDockTab> FRuntimeIMDebugsDockable::SpawnTab(const FSpawnTabArgs& Args)
@@ -368,7 +392,7 @@ TSharedRef<SDockTab> FRuntimeIMDebugsDockable::SpawnTab(const FSpawnTabArgs& Arg
 			RuntimeIMWidget->GetExposedWidget()
 		];
 
-	RuntimeTab = Tab;
+	RuntimeIMTab = Tab;
 
 	return Tab;
 }

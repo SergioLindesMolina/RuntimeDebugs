@@ -1,19 +1,84 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "RuntimeIMDebugs.h"
+#include "RuntimeIMDebugsSubsystem.h"
+#include "RuntimeIMDebugsLog.h"
+
+#include "Engine/Engine.h"
+#include "HAL/IConsoleManager.h"
 
 #define LOCTEXT_NAMESPACE "FRuntimeIMDebugsModule"
 
 void FRuntimeIMDebugsModule::StartupModule()
 {
-	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
+	//Register Console Command
+	if (!IConsoleManager::Get().IsNameRegistered(TEXT("RuntimeIMDebugs.ShowWindow")))
+	{
+		ShowWindowConsoleCommand = IConsoleManager::Get().RegisterConsoleCommand(
+			TEXT("RuntimeIMDebugs.ShowWindow"),
+			TEXT("Shows or hides the RuntimeIMDebugs window. 0 = Hide, 1 = Show. NoArgument = Toggle"),
+			FConsoleCommandWithArgsDelegate::CreateRaw(
+				this,
+				&FRuntimeIMDebugsModule::HandleShowWindowConsoleCommand),
+			ECVF_Default
+		);
+	}
+	else
+	{
+		UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Error Registering the Command : Already exist a comand registerd with the name RuntimeIMDebugs.ShowWindow"));
+	}
+
 }
 
 void FRuntimeIMDebugsModule::ShutdownModule()
 {
-	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
-	// we call this function before unloading the module.
+	if (ShowWindowConsoleCommand)
+	{
+		IConsoleManager::Get().UnregisterConsoleObject(ShowWindowConsoleCommand);
+		ShowWindowConsoleCommand = nullptr;
+	}
+}
 
+void FRuntimeIMDebugsModule::HandleShowWindowConsoleCommand(const TArray<FString>& Args)
+{
+
+	if (!GEngine)
+	{
+		return;
+	}
+
+	UWorld* CurrentWorld = GEngine->GetCurrentPlayWorld();
+
+	if (!CurrentWorld)
+	{
+		return;
+	}
+
+	URuntimeIMDebugsSubsystem* RuntimeIMDebugsSubsystem = CurrentWorld->GetSubsystem<URuntimeIMDebugsSubsystem>();
+
+	if (!RuntimeIMDebugsSubsystem)
+	{
+		return;
+	}
+
+
+	if (Args.IsEmpty())
+	{
+		RuntimeIMDebugsSubsystem->ToggleWindow();
+		return;
+	}
+
+	const bool bShowWindow = Args[0] == "1";
+	const bool bHideWindow = Args[0] == "0";
+
+	if (bShowWindow)
+	{
+		RuntimeIMDebugsSubsystem->ShowWindow();
+	}
+	else if (bHideWindow)
+	{
+		RuntimeIMDebugsSubsystem->HideWindow();
+	}
 }
 
 #undef LOCTEXT_NAMESPACE

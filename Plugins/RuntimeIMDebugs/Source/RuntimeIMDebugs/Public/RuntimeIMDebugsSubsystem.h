@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-//#include "Subsystems/GameInstanceSubsystem.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "RuntimeIMDebugsSubsystem.generated.h"
 
@@ -22,7 +21,6 @@ enum class ERuntimeIMDebugWindowCommand : uint8
 };
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnWindowCommand, ERuntimeIMDebugWindowCommand);
-
 
 //Used to order the difrent field given the draw priority 
 struct FDebugFieldDrawListEntry 
@@ -430,8 +428,6 @@ protected:
 
     const FName ResolveDebugSectionID(const FName InSectionID) const;
 
-    void HandleShowWindowConsoleCommand(const TArray<FString>& Args);
-
     UPROPERTY(BlueprintReadOnly, Category = "RuntimeDebugsSubsystem")
     TArray<FDebugTab> Tabs;
 
@@ -441,7 +437,5 @@ private:
     // and then should no be changed
     FName DefaultTab;
     FName DefaultSection;
-
-    IConsoleObject* ShowWindowConsoleCommand = nullptr;
     
 };

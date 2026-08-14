@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
 /**
@@ -15,8 +16,10 @@
  * The framework allows programmers and designers to dynamically create:
  *		- Buttons
  *		- Toggles
- *		- Sliders
+ *		- SpinBoxes(Behave like a slider)
+ *		- Comboboxes
  *		- Float fields
+ *		- Text fields
  *
  * organized into debug tabs using a simple subsystem-driven API.
  *
@@ -34,6 +37,9 @@
  */
 
 
+
+
+
 class FRuntimeIMDebugsModule : public IModuleInterface
 {
 public:
@@ -41,5 +47,12 @@ public:
 	/** IModuleInterface implementation */
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
+
+private:
+
+	void HandleShowWindowConsoleCommand(const TArray<FString>& Args);
+
+	// Registered console command used to control the debug window.
+	IConsoleObject* ShowWindowConsoleCommand = nullptr;
 
 };

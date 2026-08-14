@@ -64,14 +64,22 @@ public:
 
 private:
 
+	static void TryToReasignWidgetAsContentToTab();
+
+	static void TryInvokeTab();
+
+	static void RequestCloseTab();
+
+	static void ToggleTab();
+
 	static TSharedRef<SDockTab> SpawnTab(const FSpawnTabArgs& Args);
 	
 	static const FName TabId;
 	
 	inline static FDelegateHandle WindowCommandHandle;
 
-	inline static TSharedPtr<FRuntimeIMDebugsExposed> RuntimeIMWidget = nullptr;
+	inline static TSharedPtr<FRuntimeIMDebugsExposed> RuntimeIMWidget;
 
-	inline static TWeakPtr<SDockTab> RuntimeTab;
+	inline static TWeakPtr<SDockTab> RuntimeIMTab;
 
 };

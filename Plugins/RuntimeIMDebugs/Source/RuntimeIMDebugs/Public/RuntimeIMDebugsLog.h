@@ -2,4 +2,4 @@
 
 #include "CoreMinimal.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogRuntimeIMDebugs, Log, All);
+RUNTIMEIMDEBUGS_API DECLARE_LOG_CATEGORY_EXTERN(LogRuntimeIMDebugs, Log, All);

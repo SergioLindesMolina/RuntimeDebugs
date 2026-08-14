@@ -4,24 +4,10 @@
 #include "RuntimeIMDebugsSettings.h"
 #include "RuntimeIMDebugsLog.h"
 
-#include "HAL/IConsoleManager.h"
 
 void URuntimeIMDebugsSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-
-	//Register Console Command
-	if (!IConsoleManager::Get().IsNameRegistered(TEXT("RuntimeIMDebugs.ShowWindow"))) 
-	{
-		ShowWindowConsoleCommand = IConsoleManager::Get().RegisterConsoleCommand(
-			TEXT("RuntimeIMDebugs.ShowWindow"),
-			TEXT("Shows or hides the RuntimeIMDebugs window. 0 = Hide, 1 = Show. NoArgument = Toggle"),
-			FConsoleCommandWithArgsDelegate::CreateUObject(
-				this,
-				&URuntimeIMDebugsSubsystem::HandleShowWindowConsoleCommand),
-			ECVF_Default
-		);
-	}
 
 	//Initialize the Default tab and Default Section
 	const URuntimeIMDebugsSettings* Settings = GetDefault<URuntimeIMDebugsSettings>();
@@ -36,14 +22,7 @@ void URuntimeIMDebugsSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void URuntimeIMDebugsSubsystem::Deinitialize()
 {
-	Tabs.Empty();
-	
-	//Unregister the console command TODO: Move this code to the module maybe??
-	if (ShowWindowConsoleCommand) 
-	{
-		IConsoleManager::Get().UnregisterConsoleObject(ShowWindowConsoleCommand);
-		ShowWindowConsoleCommand = nullptr;
-	}
+	Tabs.Empty();	
 
 	Super::Deinitialize();
 }
@@ -267,28 +246,6 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
  {
 	 return InSectionID.IsNone() ? DefaultSection : InSectionID;
  }
-
- void URuntimeIMDebugsSubsystem::HandleShowWindowConsoleCommand(const TArray<FString>& Args)
- {
-	 if (Args.IsEmpty()) 
-	 {
-		 ToggleWindow();
-		 return;
-	 }
-
-	 const bool bShowWindow = Args[0] == "1";
-	 const bool bHideWindow = Args[0] == "0";
-
-	 if (bShowWindow) 
-	 {
-		 ShowWindow();
-	 }
-	 else if (bHideWindow)
-	 {
-		 HideWindow();
-	 }
- }
-	
 
 void URuntimeIMDebugsSubsystem::AddButton(const FName InTabID, const FName InSectionID, const FName InID, const FString& InLabel, int InDrawPriority)
 {	
