@@ -1,13 +1,8 @@
 # RuntimeIMDebugs
 
-RuntimeIMDebugs is a free and open-source Unreal Engine plugin that provides a lightweight runtime debug window for exposing gameplay and system information during development.
-
-The plugin allows programmers and designers to create runtime debug interfaces directly from C++ without having to create custom UMG widgets or editor tools.
-
-RuntimeIMDebugs is built on top of SlateIM and is designed for fast iteration, gameplay debugging, parameter tuning, and temporary runtime instrumentation.
-
 ## Contents
 
+- [About](#about)
 - [Features](#features)
 - [Requirements](#requirements)
 - [Installation](#installation)
@@ -21,6 +16,16 @@ RuntimeIMDebugs is built on top of SlateIM and is designed for fast iteration, g
 - [Extending RuntimeIMDebugs](#extending-runtimeimdebugs)
 - [Project Structure](#project-structure)
 - [License](#license)
+
+RuntimeIMDebugs is a free and open-source Unreal Engine plugin that provides a lightweight runtime debug window for exposing gameplay and system information during development.
+
+The plugin allows programmers and designers to create runtime debug interfaces directly from C++ without having to create custom UMG widgets or editor tools.
+
+RuntimeIMDebugs is built on top of SlateIM and is designed for fast iteration, gameplay debugging, parameter tuning, and temporary runtime instrumentation.
+
+The plugin is designed primarily for use during PIE sessions and is not currently intended for Standalone or Shipping builds. It may be possible to extend RuntimeIMDebugs to support these modes, and support for them may be added in the future.
+
+The main goal of RuntimeIMDebugs is to provide a simple way to create a small debug window for testing and adjusting gameplay systems that are difficult to handle with simple log messages or `PrintString`. It can be used to quickly test and tune abilities, game modes, enemies, and other gameplay systems during early development without having to build a custom debug window from scratch.
 
 ## Features
 
