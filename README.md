@@ -6,6 +6,22 @@ The plugin allows programmers and designers to create runtime debug interfaces d
 
 RuntimeIMDebugs is built on top of SlateIM and is designed for fast iteration, gameplay debugging, parameter tuning, and temporary runtime instrumentation.
 
+## Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+  - [Clone from GitHub](#clone-from-github)
+  - [Setup](#setup)
+- [Configuration](#configuration)
+- [Architecture](#architecture)
+- [API](#api)
+- [Console Command](#console-command)
+- [Supported Debug Fields](#supported-debug-fields)
+- [Extending RuntimeIMDebugs](#extending-runtimeimdebugs)
+- [Project Structure](#project-structure)
+- [License](#license)
+
 ## Features
 
 * Runtime debug window integrated with Unreal Engine
