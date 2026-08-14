@@ -155,6 +155,9 @@ DebugSubsystem->OnDebugButtonClicked.AddUObject(
     &AMyActor::OnDebugButtonClicked
 );
 ```
+<img width="1438" height="454" alt="image" src="https://github.com/user-attachments/assets/6eadc1cc-7a6b-4857-a8dc-5fc22d817400" />
+
+
 Then identify the element inside the callback using its ID:
 
 ```cpp
@@ -170,6 +173,8 @@ void AMyActor::OnDebugButtonClicked(FName DebugID)
     }
 }
 ```
+<img width="1188" height="754" alt="image" src="https://github.com/user-attachments/assets/f2dad2d7-e43c-40c0-b36a-5a1fbdfff112" />
+
 This allows multiple debug elements to share the same callback instead of requiring a separate function for every button or control.
 
 The same approach is used for the other interactive debug elements, such as toggles, combo boxes, spin boxes, and other supported controls.
@@ -211,6 +216,9 @@ Debug elements can be added directly through the subsystem:
         TEXT("State"),
         TEXT("Idle")
     );
+
+<img width="992" height="593" alt="image" src="https://github.com/user-attachments/assets/9a768372-039c-4214-ac43-1005e1f2f9fc" />
+
 
 Tabs and sections do not need to be created beforehand. They are automatically created when required.
 
