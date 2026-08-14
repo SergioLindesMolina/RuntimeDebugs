@@ -48,6 +48,17 @@ void URuntimeIMDebugsSubsystem::ToggleWindow()
 #endif
 }
 
+/**
+ * Adds a new debug tab.
+ *
+ * If InID is NAME_None, the configured default tab ID is used.
+ * Tab IDs must be unique within the subsystem.
+ *
+ * @param InID          Unique identifier for the tab.
+ * @param InLabel       Display label. If empty, the tab ID is used.
+ *
+ * @return The index of the existing or newly created tab.
+ */
 int URuntimeIMDebugsSubsystem::AddTab(const FName InID, const FString& InLabel)
 {
 	FName ResolvedTabID = ResolveTabID(InID);
@@ -71,6 +82,20 @@ int URuntimeIMDebugsSubsystem::AddTab(const FName InID, const FString& InLabel)
 		return FoundTabIndex;
 	}
 }
+
+/**
+ * Adds a debug section to a tab.
+ *
+ * If InTabID or InID is NAME_None, their corresponding configured
+ * default IDs are used.
+ *
+ * Sections are displayed in ascending DrawPriority order.
+ *
+ * Section IDs must be unique within the specified tab.
+ *
+ * @return The index of the existing or newly created section,
+ *         or INDEX_NONE if the tab does not exist.
+ */
 
 int URuntimeIMDebugsSubsystem::AddDebugSection(const FName InTabID, const FName InID, const FString& InLabel, int InDrawPriority)
 {
@@ -115,7 +140,13 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 	return Tabs;
 }
 
-
+/**
+ * Finds a debug tab without logging when the tab does not exist.
+ *
+ * If InID is NAME_None, the configured default tab ID is used.
+ *
+ * @return The requested tab, or nullptr if it does not exist.
+ */
  FDebugTab* URuntimeIMDebugsSubsystem::GetTab(const FName InID)
 {
 	 FName ResolvedTabID = ResolveTabID(InID);
@@ -128,11 +159,36 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 	 }
 	 else
 	 {
-		 UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't found any DebugTab with id %s"), *InID.ToString());
 		 return nullptr;
 	 }
 
 }
+
+ /**
+ * Finds a debug tab and logs an error if the tab does not exist.
+ *
+ * If InID is NAME_None, the configured default tab ID is used.
+ *
+ * Use this when the caller expects the tab to already exist.
+ *
+ * @return The requested tab, or nullptr if it does not exist.
+ */
+ FDebugTab* URuntimeIMDebugsSubsystem::GetTabChecked(const FName InID)
+ {
+	 FName ResolvedTabID = ResolveTabID(InID);
+
+	 auto FoundTab = Tabs.FindByPredicate([ResolvedTabID](const FDebugTab& InTab) { return InTab.ID == ResolvedTabID; });
+
+	 if (FoundTab)
+	 {
+		 return FoundTab;
+	 }
+	 else
+	 {
+		 UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't find any DebugTab with id %s"), *InID.ToString());
+		 return nullptr;
+	 }
+ }
 
  const FDebugTab* URuntimeIMDebugsSubsystem::GetTab(const FName InID) const
  {
@@ -146,7 +202,23 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 	 }
 	 else
 	 {
-		 UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't found any DebugTab with id %s"), *InID.ToString());
+		 return nullptr;
+	 }
+ }
+
+ const FDebugTab* URuntimeIMDebugsSubsystem::GetTabChecked(const FName InID) const
+ {
+	 FName ResolvedTabID = ResolveTabID(InID);
+
+	 auto FoundTab = Tabs.FindByPredicate([ResolvedTabID](const FDebugTab& InTab) { return InTab.ID == ResolvedTabID; });
+
+	 if (FoundTab)
+	 {
+		 return FoundTab;
+	 }
+	 else
+	 {
+		 UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't find any DebugTab with id %s"), *InID.ToString());
 		 return nullptr;
 	 }
  }
@@ -199,6 +271,16 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 	 }
  }
 
+ /**
+ * Finds a debug tab or creates it if it does not exist.
+ *
+ * If InTabID is NAME_None, the configured default tab is used.
+ *
+ * This is the preferred lookup method for Add* functions because
+ * debug tabs do not need to be explicitly created beforehand.
+ *
+ * @return The existing or newly created debug tab.
+ */
  FDebugTab* URuntimeIMDebugsSubsystem::GetOrCreateTab(const FName InTabID)
  {
 	 //Check if the selected tab exist or if the passed id is empty in which case the default tab will be used
@@ -214,6 +296,17 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 	 }
  }
 
+ /**
+ * Finds a debug section or creates it if it does not exist.
+ *
+ * The required tab is also automatically created if necessary.
+ *
+ * If InTabID or InSectionID is NAME_None, their corresponding
+ * configured default IDs are used.
+ *
+ * This is used internally by the Add* functions so callers normally
+ * do not need to create tabs or sections manually.
+ */
  FDebugSection* URuntimeIMDebugsSubsystem::GetOrCreateDebugSection(const FName InTabID, const FName InSectionID)
  {
 	 //We need a valid tab to add or find a section
@@ -223,8 +316,6 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 		return nullptr;
 	 }
 	 
-
-
 	 //Check if the selected Debug section exist or if the passed debug section id is empty in wich case the default section will be used 
 	 if (FDebugSection* SelectedSection =  GetDebugSection(SelectedTab, InSectionID))
 	 {
@@ -237,16 +328,29 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 	 }
  }
 
+ /** Resolves NAME_None to the configured default tab ID. */
  const FName URuntimeIMDebugsSubsystem::ResolveTabID(const FName InTabID) const
  {
 	 return InTabID.IsNone() ? DefaultTab : InTabID;
  }
 
+ /** Resolves NAME_None to the configured default section ID. */
  const FName URuntimeIMDebugsSubsystem::ResolveDebugSectionID(const FName InSectionID) const
  {
 	 return InSectionID.IsNone() ? DefaultSection : InSectionID;
  }
 
+
+ /**
+ * Adds a button to a debug section.
+ *
+ * The tab and section are automatically created if they do not exist.
+ * If InTabID or InSectionID is NAME_None, the corresponding default
+ * is used.
+ *
+ * InID must be unique within the section.
+ * If InLabel is empty, InID is used as the display label.
+ */
 void URuntimeIMDebugsSubsystem::AddButton(const FName InTabID, const FName InSectionID, const FName InID, const FString& InLabel, int InDrawPriority)
 {	
 	if (FDebugSection* SelectedSection = GetOrCreateDebugSection(InTabID, InSectionID)) 

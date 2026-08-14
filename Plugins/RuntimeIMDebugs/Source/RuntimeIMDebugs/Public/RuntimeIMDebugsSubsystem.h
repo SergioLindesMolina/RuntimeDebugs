@@ -412,7 +412,11 @@ protected:
 
     FDebugTab* GetTab(const FName InID);
 
+    FDebugTab* GetTabChecked(const FName InID);
+
     const FDebugTab* GetTab(const FName InID) const;
+
+    const FDebugTab* GetTabChecked(const FName InID) const;
 
     FDebugSection* GetDebugSection(const FName InTabID, const FName InID);
 
