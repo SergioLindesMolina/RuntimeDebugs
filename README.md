@@ -74,6 +74,9 @@ The default tab and section can be configured from the plugin settings.
 
 These values are used whenever `NAME_None` is supplied as a tab or section ID.
 
+<img width="1919" height="590" alt="image" src="https://github.com/user-attachments/assets/e330eb1d-547f-48a6-a24b-52ebaf9df2d4" />
+
+
 ## Architecture
 
 RuntimeIMDebugs is built around a `UWorldSubsystem`.
