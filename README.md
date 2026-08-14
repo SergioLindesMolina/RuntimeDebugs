@@ -138,6 +138,42 @@ Each field has an `FName` ID that is used to access it after creation.
 
 The main API is exposed through `URuntimeIMDebugsSubsystem`.
 
+### Debug Element Events
+
+The main way to interact with RuntimeIMDebugs is through the events exposed by `URuntimeIMDebugsSubsystem`.
+
+When a debug element is interacted with, the subsystem broadcasts its corresponding delegate. The callback receives the identifier of the debug element, allowing you to handle multiple elements from a single callback.
+
+A typical setup is:
+
+```cpp
+URuntimeIMDebugsSubsystem* DebugSubsystem =
+    GetWorld()->GetSubsystem<URuntimeIMDebugsSubsystem>();
+
+DebugSubsystem->OnDebugButtonClicked.AddUObject(
+    this,
+    &AMyActor::OnDebugButtonClicked
+);
+```
+Then identify the element inside the callback using its ID:
+
+```cpp
+void AMyActor::OnDebugButtonClicked(FName DebugID)
+{
+    if (DebugID == TEXT("ResetPlayer"))
+    {
+        ResetPlayer();
+    }
+    else if (DebugID == TEXT("KillAllEnemies"))
+    {
+        KillAllEnemies();
+    }
+}
+```
+This allows multiple debug elements to share the same callback instead of requiring a separate function for every button or control.
+
+The same approach is used for the other interactive debug elements, such as toggles, combo boxes, spin boxes, and other supported controls.
+
 ### Creating Debug Elements
 
 Debug elements can be added directly through the subsystem:
