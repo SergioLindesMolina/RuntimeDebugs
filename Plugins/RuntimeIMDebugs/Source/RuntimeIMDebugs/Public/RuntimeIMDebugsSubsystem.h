@@ -7,11 +7,11 @@
 #include "RuntimeIMDebugsSubsystem.generated.h"
 
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDebugButtonPressed, const FName, ID);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDebugToggleChanged, const FName, ID, bool, Value);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDebugSpinBoxChanged, const FName, ID, float, Value);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDebugFloatFieldChanged, const FName, ID, float, Value);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDebugComboBoxChanged, const FName, ID, int, Index);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnDebugButtonPressed, const FName, TabID, const FName, SectionID, const FName, ID);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnDebugToggleChanged, const FName, TabID, const FName, SectionID, const FName, ID, bool, Value);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnDebugSpinBoxChanged, const FName, TabID, const FName, SectionID, const FName, ID, float, Value);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnDebugFloatFieldChanged, const FName, TabID, const FName, SectionID, const FName, ID, float, Value);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnDebugComboBoxChanged, const FName, TabID, const FName, SectionID, const FName, ID, int, Index);
 
 enum class ERuntimeIMDebugWindowCommand : uint8
 {
@@ -44,18 +44,32 @@ struct FDebugField
     GENERATED_BODY()
 
     FDebugField() 
-        : ID(NAME_None), 
+        :
+        TabID(NAME_None),
+        SectionID(NAME_None),
+        ID(NAME_None), 
         DrawPriority(0) 
     {}
     
     FDebugField(
+        FName InTabID,
+        FName InSectionID,
         FName InID, 
         int InDrawPriority = 0) 
-        : ID(InID), 
+        :
+        TabID(InTabID),
+        SectionID(InSectionID),
+        ID(InID), 
         DrawPriority(InDrawPriority) 
     {}
 
-    /*Must be unique*/
+    UPROPERTY(BlueprintReadOnly, Category = "DebugField")
+    FName TabID;
+
+    UPROPERTY(BlueprintReadOnly, Category = "DebugField")
+    FName SectionID;
+
+    /*Must be unique inside his section*/
     UPROPERTY(BlueprintReadOnly, Category = "DebugField")
     FName ID;
 
@@ -69,14 +83,14 @@ struct FDebugTextField
     GENERATED_BODY()
 
     FDebugTextField()
-        : Field(NAME_None, 0)
+        : Field(NAME_None, NAME_None, NAME_None, 0)
         , Label("")
         , Text("")
     {
     }
 
-    FDebugTextField(FName InID, const FString& InLable, const FString& InText, int InDrawPriority)
-        : Field(InID, InDrawPriority)
+    FDebugTextField(FName InTabID, FName InSectionID, FName InID, const FString& InLable, const FString& InText, int InDrawPriority)
+        : Field(InTabID, InSectionID, InID, InDrawPriority)
         , Label(InLable)
         , Text(InText)
     {
@@ -98,15 +112,15 @@ struct FDebugFloatField
     GENERATED_BODY()
 
     FDebugFloatField()
-        : Field(NAME_None, 0)
+        : Field(NAME_None, NAME_None, NAME_None, 0)
         , Label("")
         , CachedStringAsValue(FString::SanitizeFloat(0))
         , Value(0.f)
     {
     }
 
-    FDebugFloatField(FName InID, const FString& InLable, const FString& InCachedString, float InValue, int InDrawPriority)
-        : Field(InID, InDrawPriority)
+    FDebugFloatField(FName InTabID, FName InSectionID, FName InID, const FString& InLable, const FString& InCachedString, float InValue, int InDrawPriority)
+        : Field(InTabID, InSectionID, InID, InDrawPriority)
         , Label(InLable)
         , CachedStringAsValue(InCachedString)
         , Value(InValue)
@@ -132,15 +146,16 @@ struct FDebugComboBox
     GENERATED_BODY()
 
     FDebugComboBox()
-        : Field(NAME_None, 0)
+        : Field(NAME_None, NAME_None, NAME_None, 0)
         , Label("")
         , Options(TArray<FString>{})
         , Index(0)
+        , bRefreshComboOptions(false)
     {
     }
 
-    FDebugComboBox(FName InID, const FString& InLable, const TArray<FString>& InOptions, int InIndex, int InDrawPriority)
-        : Field(InID, InDrawPriority)
+    FDebugComboBox(FName InTabID, FName InSectionID, FName InID, const FString& InLable, const TArray<FString>& InOptions, int InIndex, int InDrawPriority)
+        : Field(InTabID, InSectionID, InID, InDrawPriority)
         , Label(InLable)
         , Options(InOptions)
         , Index(InIndex)
@@ -158,6 +173,9 @@ struct FDebugComboBox
 
     UPROPERTY(BlueprintReadOnly, Category = "DebugComboBox")
     int Index;
+
+    UPROPERTY(BlueprintReadOnly, Category = "DebugComboBox")
+    bool bRefreshComboOptions;
 };
 
 USTRUCT(BlueprintType)
@@ -166,7 +184,7 @@ struct FDebugSpinBox
     GENERATED_BODY()
 
     FDebugSpinBox()
-        : Field(NAME_None, 0)
+        : Field(NAME_None, NAME_None, NAME_None, 0)
         , Label("")
         , Value(0.f)
         , Min(0.f)
@@ -174,8 +192,8 @@ struct FDebugSpinBox
     {
     }
 
-    FDebugSpinBox(FName InID, const FString& InLable, float InValue, float InMin, float InMax, int InDrawPriority)
-        : Field(InID, InDrawPriority)
+    FDebugSpinBox(FName InTabID, FName InSectionID, FName InID, const FString& InLable, float InValue, float InMin, float InMax, int InDrawPriority)
+        : Field(InTabID, InSectionID, InID, InDrawPriority)
         , Label(InLable)
         , Value(InValue)
         , Min(InMin)
@@ -205,14 +223,14 @@ struct FDebugToggle
     GENERATED_BODY()
 
     FDebugToggle()
-        : Field(NAME_None, 0)
+        : Field(NAME_None, NAME_None, NAME_None, 0)
         , Label("")
         , Value(false)
     {
     }
 
-    FDebugToggle(FName InID, const FString& InLable, bool InValue, int InDrawPriority)
-        : Field(InID, InDrawPriority)
+    FDebugToggle(FName InTabID, FName InSectionID, FName InID, const FString& InLable, bool InValue, int InDrawPriority)
+        : Field(InTabID, InSectionID, InID, InDrawPriority)
         , Label(InLable)
         , Value(InValue)
     {
@@ -235,13 +253,13 @@ struct FDebugButton
     GENERATED_BODY()
 
     FDebugButton()
-        : Field(NAME_None, 0)
+        : Field(NAME_None, NAME_None, NAME_None, 0)
         , Label("")
     {
     }
 
-    FDebugButton(FName InID, const FString& InLable, int InDrawPriority)
-        : Field(InID, InDrawPriority)
+    FDebugButton(FName InTabID, FName InSectionID, FName InID, const FString& InLable, int InDrawPriority)
+        : Field(InTabID, InSectionID, InID, InDrawPriority)
         , Label(InLable)
     {
     }
@@ -260,20 +278,32 @@ struct FDebugSection
     GENERATED_BODY()
 
     FDebugSection()
-        : Field(NAME_None, 0),
+        : 
+        TabID(NAME_None),
+        ID(NAME_None),
+        DrawPriority(0),
         Label("Default")
     {
     }
 
-    FDebugSection(FName InID, const FString InLabel, int InDrawPriority)
-        : Field(InID, InDrawPriority),
+    FDebugSection(FName InTabID, FName InID, const FString InLabel, int InDrawPriority)
+        : 
+        TabID(InTabID),
+        ID(InID),
+        DrawPriority(InDrawPriority),
         Label(InLabel)
     {
     }
 
 
     UPROPERTY(BlueprintReadOnly, Category = "DebugSection")
-    FDebugField Field;
+    FName TabID;
+
+    UPROPERTY(BlueprintReadOnly, Category = "DebugSection")
+    FName ID;
+
+    UPROPERTY(BlueprintReadOnly, Category = "DebugSection")
+    int DrawPriority;
 
     UPROPERTY(BlueprintReadOnly, Category = "DebugSection")
     FString Label;
@@ -386,6 +416,14 @@ public:
     int GetComboBoxIndex(const FName InTabID, const FName InSectionID, const FName InID) const;
     UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     void SetComboBoxIndex(const FName InTabID, const FName InSectionID, const FName InID, int InIndex);
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
+    TArray<FString> GetComboBoxOptions(const FName InTabID, const FName InSectionID, const FName InID) const;
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
+    void AddComboBoxOption(const FName InTabID, const FName InSectionID, const FName InID, const FString& InOption);
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
+    void RemoveComboBoxOptionByIndex(const FName InTabID, const FName InSectionID, const FName InID, int InIndex);
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
+    void RemoveComboBoxOptionByName(const FName InTabID, const FName InSectionID, const FName InID, const FString& InOption);
 
     UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     void AddText(const FName InTabID, const FName InSectionID, const FName InID, const FString& InLabel = TEXT(""), const FString& InText = "", int InDrawPriority = 0);
@@ -441,5 +479,5 @@ private:
     // and then should no be changed
     FName DefaultTab;
     FName DefaultSection;
-    
+ 
 };

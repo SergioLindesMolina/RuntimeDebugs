@@ -21,7 +21,8 @@ public:
 
 	FRuntimeIMDebugsExposed()
 		: FSlateIMExposedBase(TEXT("Debug"))
-	{ }
+	{
+	}
 
 	void DrawContent(float DeltaTime) override;
 
@@ -40,7 +41,6 @@ public:
 	void DrawDebugSection(FDebugSection& InDebugSection, URuntimeIMDebugsSubsystem* InDebugSubsystem);
 
 	void DrawTab(FDebugTab& InTab, URuntimeIMDebugsSubsystem* InDebugSubsystem);
-
 
 };
 

@@ -103,19 +103,19 @@ int URuntimeIMDebugsSubsystem::AddDebugSection(const FName InTabID, const FName 
 	{
 		FName ProcessedSectionID = ResolveDebugSectionID(InID);
 
-		auto FoundDebugSectionIndex = SelectedTab->DebugSections.IndexOfByPredicate([ProcessedSectionID](const FDebugSection& DebugSection) { return DebugSection.Field.ID == ProcessedSectionID; });
+		auto FoundDebugSectionIndex = SelectedTab->DebugSections.IndexOfByPredicate([ProcessedSectionID](const FDebugSection& DebugSection) { return DebugSection.ID == ProcessedSectionID; });
 		
 		if (FoundDebugSectionIndex == INDEX_NONE)
 		{
 			FString SectionLabel = InLabel.IsEmpty() ? ProcessedSectionID.ToString() : InLabel;
-			int CreatedDebugSectionIndex = SelectedTab->DebugSections.Emplace(ProcessedSectionID, SectionLabel, InDrawPriority);
+			int CreatedDebugSectionIndex = SelectedTab->DebugSections.Emplace(InTabID, ProcessedSectionID, SectionLabel, InDrawPriority);
 
 			//Given that tabs only contains one type, DebugSections
 			//Always sort the array after adding a new DebugSection to avoid sorting each frame in the draw window
 
 			SelectedTab->DebugSections.StableSort([](const FDebugSection& A, const FDebugSection& B)
 				{
-					return A.Field.DrawPriority < B.Field.DrawPriority;
+					return A.DrawPriority < B.DrawPriority;
 				});
 
 
@@ -229,7 +229,7 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 	 {
 		 FName ProcessedSectionID = ResolveDebugSectionID(InID);
 
-		 auto FoundDebugSection = SelectedTab->DebugSections.FindByPredicate([ProcessedSectionID](FDebugSection& InDebugSection) { return InDebugSection.Field.ID == ProcessedSectionID; });
+		 auto FoundDebugSection = SelectedTab->DebugSections.FindByPredicate([ProcessedSectionID](FDebugSection& InDebugSection) { return InDebugSection.ID == ProcessedSectionID; });
 
 		 return FoundDebugSection;
 	 }
@@ -245,7 +245,7 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 	 {
 		 FName ProcessedSectionID = ResolveDebugSectionID(InID);
 
-		 auto FoundDebugSection = InTab->DebugSections.FindByPredicate([ProcessedSectionID](const FDebugSection& InDebugSection) { return InDebugSection.Field.ID == ProcessedSectionID; });
+		 auto FoundDebugSection = InTab->DebugSections.FindByPredicate([ProcessedSectionID](const FDebugSection& InDebugSection) { return InDebugSection.ID == ProcessedSectionID; });
 
 		 return FoundDebugSection;
 	 }
@@ -261,7 +261,7 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 	 {
 		 FName ProcessedSectionID = ResolveDebugSectionID(InID);
 
-		 auto FoundDebugSection = SelectedTab->DebugSections.FindByPredicate([ProcessedSectionID](const FDebugSection& InDebugSection) { return InDebugSection.Field.ID == ProcessedSectionID; });
+		 auto FoundDebugSection = SelectedTab->DebugSections.FindByPredicate([ProcessedSectionID](const FDebugSection& InDebugSection) { return InDebugSection.ID == ProcessedSectionID; });
 
 		 return FoundDebugSection;
 	 }
@@ -366,7 +366,7 @@ void URuntimeIMDebugsSubsystem::AddButton(const FName InTabID, const FName InSec
 		else
 		{
 			FString ButtonLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
-			SelectedSection->Buttons.Emplace(InID, ButtonLabel, InDrawPriority);
+			SelectedSection->Buttons.Emplace(InTabID, InSectionID, InID, ButtonLabel, InDrawPriority);
 		}
 	}
 	else
@@ -391,7 +391,7 @@ void URuntimeIMDebugsSubsystem::AddToggle(const FName InTabID, const FName InSec
 		else
 		{
 			FString ToggleLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
-			SelectedSection->Toggles.Emplace(InID, ToggleLabel, InValue, InDrawPriority);
+			SelectedSection->Toggles.Emplace(InTabID, InSectionID, InID, ToggleLabel, InValue, InDrawPriority);
 		}
 	}
 }
@@ -456,7 +456,7 @@ void URuntimeIMDebugsSubsystem::AddSpinBox(const FName InTabID, const FName InSe
 		else
 		{			
 			FString SpinBoxLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
-			SelectedSection->SpinBoxes.Emplace(InID, SpinBoxLabel, InValue, InMin, InMax, InDrawPriority);
+			SelectedSection->SpinBoxes.Emplace(InTabID, InSectionID, InID, SpinBoxLabel, InValue, InMin, InMax, InDrawPriority);
 		}		
 	}
 }
@@ -519,7 +519,7 @@ void URuntimeIMDebugsSubsystem::AddFloatField(const FName InTabID, const FName I
 		else
 		{
 			FString FloatLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
-			SelectedSection->FloatFields.Emplace(InID, FloatLabel, FString::SanitizeFloat(InValue), InValue, InDrawPriority);
+			SelectedSection->FloatFields.Emplace(InTabID, InSectionID, InID, FloatLabel, FString::SanitizeFloat(InValue), InValue, InDrawPriority);
 		}		
 	}
 }
@@ -583,7 +583,7 @@ void URuntimeIMDebugsSubsystem::AddComboBox(const FName InTabID, const FName InS
 		else
 		{
 			FString ComboBoxLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
-			SelectedSection->ComboBoxes.Emplace(InID, ComboBoxLabel, InOptions, InIndex, InDrawPriority);
+			SelectedSection->ComboBoxes.Emplace(InTabID, InSectionID, InID, ComboBoxLabel, InOptions, InIndex, InDrawPriority);
 		}
 	}
 }
@@ -622,10 +622,119 @@ void URuntimeIMDebugsSubsystem::SetComboBoxIndex(const FName InTabID, const FNam
 		if (FoundComboBox)
 		{
 			FoundComboBox->Index = InIndex;
+			FoundComboBox->bRefreshComboOptions = true;
 		}
 		else
 		{
 			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't set ComboBox index the id : '%s' , is not assigned to any FDebugComboBox"),
+				*InID.ToString());
+		}
+	}
+}
+
+TArray<FString> URuntimeIMDebugsSubsystem::GetComboBoxOptions(const FName InTabID, const FName InSectionID, const FName InID) const
+{
+	if (const FDebugSection* SelectedSection = GetDebugSection(InTabID, InSectionID))
+	{
+		auto FoundComboBox = SelectedSection->ComboBoxes.FindByPredicate([InID](const FDebugComboBox& InComboBox)
+			{ return InComboBox.Field.ID == InID; });
+
+		if (FoundComboBox)
+		{
+			return FoundComboBox->Options;
+		}
+		else
+		{
+			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't get ComboBox options the id : '%s' , is not assigned to any FDebugComboBox"),
+				*InID.ToString());
+			return {};
+		}
+	}
+	else
+	{
+		return {};
+	}
+}
+
+
+/*
+* This function will always add the option to the option list , does not matter if the named option already exist 
+*/
+void URuntimeIMDebugsSubsystem::AddComboBoxOption(const FName InTabID, const FName InSectionID, const FName InID, const FString& InOption)
+{
+	if (FDebugSection* SelectedSection = GetDebugSection(InTabID, InSectionID))
+	{
+		auto FoundComboBox = SelectedSection->ComboBoxes.FindByPredicate([InID](const FDebugComboBox& InComboBox)
+			{ return InComboBox.Field.ID == InID; });
+
+		if (FoundComboBox)
+		{			
+			FoundComboBox->Options.Add(InOption);
+			FoundComboBox->bRefreshComboOptions = true;						
+		}
+		else
+		{
+			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't get ComboBox options the id : '%s' , is not assigned to any FDebugComboBox"),
+				*InID.ToString());
+		}
+	}
+}
+
+void URuntimeIMDebugsSubsystem::RemoveComboBoxOptionByIndex(const FName InTabID, const FName InSectionID, const FName InID, int InIndex)
+{
+	if (FDebugSection* SelectedSection = GetDebugSection(InTabID, InSectionID))
+	{
+		auto FoundComboBox = SelectedSection->ComboBoxes.FindByPredicate([InID](const FDebugComboBox& InComboBox)
+			{ return InComboBox.Field.ID == InID; });
+
+		if (FoundComboBox)
+		{			
+			if (FoundComboBox->Options.IsValidIndex(InIndex)) 
+			{
+				FoundComboBox->Options.RemoveAt(InIndex);
+				FoundComboBox->bRefreshComboOptions = true;
+			}
+			else
+			{
+				UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't remove the index %d from ComboBox with id : '%s' , because is not a valid index"),
+					InIndex,*InID.ToString());
+			}
+		}
+		else
+		{
+			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't get ComboBox options the id : '%s' , is not assigned to any FDebugComboBox"),
+				*InID.ToString());
+		}
+	}
+}
+
+/*
+* This function will remove the first option with the selected name in the option list
+*/
+
+void URuntimeIMDebugsSubsystem::RemoveComboBoxOptionByName(const FName InTabID, const FName InSectionID, const FName InID, const FString& InOption)
+{
+	if (FDebugSection* SelectedSection = GetDebugSection(InTabID, InSectionID))
+	{
+		auto FoundComboBox = SelectedSection->ComboBoxes.FindByPredicate([InID](const FDebugComboBox& InComboBox)
+			{ return InComboBox.Field.ID == InID; });
+
+		if (FoundComboBox)
+		{
+			if (FoundComboBox->Options.Contains(InOption))
+			{
+				FoundComboBox->Options.Remove(InOption);
+				FoundComboBox->bRefreshComboOptions = true;
+			}
+			else
+			{
+				UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't remove the option %s from ComboBox with id : '%s' , because is not a valid index"),
+					*InOption, *InID.ToString());
+			}
+		}
+		else
+		{
+			UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Can't get ComboBox options the id : '%s' , is not assigned to any FDebugComboBox"),
 				*InID.ToString());
 		}
 	}
@@ -646,7 +755,7 @@ void URuntimeIMDebugsSubsystem::AddText(const FName InTabID, const FName InSecti
 		else
 		{
 			FString TextFieldLabel = InLabel.IsEmpty() ? InID.ToString() : InLabel;
-			SelectedSection->TextFields.Emplace(InID, TextFieldLabel, InText, InDrawPriority);
+			SelectedSection->TextFields.Emplace(InTabID, InSectionID, InID, TextFieldLabel, InText, InDrawPriority);
 		}
 	}
 }

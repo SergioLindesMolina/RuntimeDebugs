@@ -21,6 +21,7 @@ void FRuntimeIMDebugsExposed::DrawContent(float DeltaTime)
 	SlateIM::BeginTabStack();
 	
 	UWorld* World = nullptr;
+	URuntimeIMDebugsSubsystem* DebugSubsystem = nullptr;
 
 	for (const FWorldContext& Context : GEngine->GetWorldContexts())
 	{
@@ -33,7 +34,9 @@ void FRuntimeIMDebugsExposed::DrawContent(float DeltaTime)
 
 	if (World) 
 	{
-		if (URuntimeIMDebugsSubsystem* DebugSubsystem = World->GetSubsystem<URuntimeIMDebugsSubsystem>())
+		DebugSubsystem = World->GetSubsystem<URuntimeIMDebugsSubsystem>();
+
+		if (DebugSubsystem)
 		{
 			TArray<FDebugTab>& TabsToDraw = DebugSubsystem->GetTabs();
 
@@ -53,7 +56,7 @@ void FRuntimeIMDebugsExposed::DrawButton(const FDebugButton& InButton, URuntimeI
 {
 	if (SlateIM::Button(*InButton.Label))
 	{
-		InDebugSubsystem->OnButtonPressed.Broadcast(InButton.Field.ID);
+		InDebugSubsystem->OnButtonPressed.Broadcast(InButton.Field.TabID, InButton.Field.SectionID, InButton.Field.ID);
 	}
 }
 
@@ -61,7 +64,7 @@ void FRuntimeIMDebugsExposed::DrawToggle(FDebugToggle& InToggle, URuntimeIMDebug
 {
 	if (SlateIM::CheckBox(*InToggle.Label, InToggle.Value))
 	{
-		InDebugSubsystem->OnToggleChanged.Broadcast(InToggle.Field.ID, InToggle.Value);
+		InDebugSubsystem->OnToggleChanged.Broadcast(InToggle.Field.TabID, InToggle.Field.SectionID, InToggle.Field.ID, InToggle.Value);
 	}
 }
 
@@ -71,7 +74,7 @@ void FRuntimeIMDebugsExposed::DrawSpinBox(FDebugSpinBox& InSpinBox, URuntimeIMDe
 	SlateIM::Text(InSpinBox.Label);
 	if (SlateIM::SpinBox(InSpinBox.Value, InSpinBox.Min, InSpinBox.Max))
 	{
-		InDebugSubsystem->OnSpinBoxChanged.Broadcast(InSpinBox.Field.ID, InSpinBox.Value);
+		InDebugSubsystem->OnSpinBoxChanged.Broadcast(InSpinBox.Field.TabID, InSpinBox.Field.SectionID, InSpinBox.Field.ID, InSpinBox.Value);
 	}
 
 	SlateIM::EndHorizontalStack();
@@ -85,7 +88,8 @@ void FRuntimeIMDebugsExposed::DrawFloatField(FDebugFloatField& InFloatField, URu
 	if (SlateIM::EditableText(InFloatField.CachedStringAsValue))
 	{
 		InFloatField.Value = FCString::Atof(*InFloatField.CachedStringAsValue);
-		InDebugSubsystem->OnDebugFloatFieldChanged.Broadcast(InFloatField.Field.ID, InFloatField.Value);
+		InDebugSubsystem->OnDebugFloatFieldChanged.Broadcast(InFloatField.Field.TabID, InFloatField.Field.SectionID, 
+			InFloatField.Field.ID, InFloatField.Value);
 	}
 
 	SlateIM::EndHorizontalStack();
@@ -96,12 +100,18 @@ void FRuntimeIMDebugsExposed::DrawComboBox(FDebugComboBox& InComboBox, URuntimeI
 	SlateIM::BeginHorizontalStack();
 	SlateIM::Text(InComboBox.Label);
 
-	if (SlateIM::ComboBox(InComboBox.Options, InComboBox.Index, false))
+	if (SlateIM::ComboBox(InComboBox.Options, InComboBox.Index, InComboBox.bRefreshComboOptions))
 	{
-		InDebugSubsystem->OnDebugComboBoxChanged.Broadcast(InComboBox.Field.ID, InComboBox.Index);
+		InDebugSubsystem->OnDebugComboBoxChanged.Broadcast(InComboBox.Field.TabID, InComboBox.Field.SectionID, 
+			InComboBox.Field.ID, InComboBox.Index);
 	}
 
 	SlateIM::EndHorizontalStack();
+
+	if (InComboBox.bRefreshComboOptions)
+	{
+		InComboBox.bRefreshComboOptions = false;
+	}
 }
 
 void FRuntimeIMDebugsExposed::DrawTextField(FDebugTextField& InTextField, URuntimeIMDebugsSubsystem* InDebugSubsystem)
