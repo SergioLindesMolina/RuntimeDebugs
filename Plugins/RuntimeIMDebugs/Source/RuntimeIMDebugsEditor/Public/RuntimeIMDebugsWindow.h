@@ -12,6 +12,7 @@ struct FDebugFloatField;
 struct FDebugComboBox;
 struct FDebugSection;
 struct FDebugTextField;
+class UWorld;
 
 enum class ERuntimeIMDebugWindowCommand : uint8;
 
@@ -52,8 +53,8 @@ public:
 
 	static void UnregisterTab();
 	
-	static void RecreateWidget();
-	
+	static void OnWorldBeginTearDown(UWorld* InWorld);
+
 	static void OnStartPIE();
 
 	static void HandleWindowCommand(ERuntimeIMDebugWindowCommand InCommand);

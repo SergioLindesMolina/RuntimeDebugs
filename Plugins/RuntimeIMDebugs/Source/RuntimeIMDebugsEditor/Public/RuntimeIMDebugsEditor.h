@@ -18,9 +18,9 @@ public:
 
 private:
 
-	void OnPostWorldInitialization(const FActorsInitializedParams& InitializationParams);
+	void OnWorldBeginTearDown(UWorld* InWorld);
 	void OnStartPIE(const bool InIsSimulating);
 
-	FDelegateHandle WorldInitializationHandle;
+	FDelegateHandle WorldCleanUpHandle;
 	FDelegateHandle StartPIEHandle;
 };

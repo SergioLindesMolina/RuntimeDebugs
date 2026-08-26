@@ -13,13 +13,6 @@
 
 void FRuntimeIMDebugsExposed::DrawContent(float DeltaTime)
 {
-	SlateIM::BeginBorder(FAppStyle::GetBrush("ToolPanel.GroupBorder"), Orient_Vertical, false);
-	SlateIM::Fill();
-	SlateIM::HAlign(HAlign_Fill);
-	SlateIM::VAlign(VAlign_Fill);
-	SlateIM::BeginTabGroup(TEXT("DebugSections"));
-	SlateIM::BeginTabStack();
-	
 	UWorld* World = nullptr;
 	URuntimeIMDebugsSubsystem* DebugSubsystem = nullptr;
 
@@ -27,29 +20,63 @@ void FRuntimeIMDebugsExposed::DrawContent(float DeltaTime)
 	{
 		if (Context.WorldType == EWorldType::PIE || Context.WorldType == EWorldType::Game)
 		{
+			//World found stop the for loop
 			World = Context.World();
 			break;
 		}
 	}
 
-	if (World) 
+	if (World)
 	{
-		DebugSubsystem = World->GetSubsystem<URuntimeIMDebugsSubsystem>();
+		DebugSubsystem = World->GetSubsystem<URuntimeIMDebugsSubsystem>();		
+	}
 
-		if (DebugSubsystem)
+	SlateIM::BeginBorder(FAppStyle::GetBrush("ToolPanel.GroupBorder"), Orient_Vertical, false);
+	SlateIM::Fill();
+	SlateIM::HAlign(HAlign_Fill);
+	SlateIM::VAlign(VAlign_Fill);
+	SlateIM::BeginTabGroup(TEXT("DebugTabs"));
+	SlateIM::BeginTabStack();
+	
+	if (DebugSubsystem)
+	{
+		//Check if there are tabs to remove and remove them to ensure that the elimination does not happen in the middle of a draw command
+		for (FName TabID : DebugSubsystem->GetTabsIDToRemove())
 		{
+			DebugSubsystem->RemoveTab(TabID);
+		}
+
+		//In case of finding tabs to remove end the draw in this moment and empty the tabs to delete array because all the tabs have been eleiminated
+		if (DebugSubsystem->AreTabsPendingToRemove()) 
+		{
+			SlateIM::EndTabStack();
+			SlateIM::EndTabGroup();
+			SlateIM::EndBorder();
+			DebugSubsystem->ClearTabsIDToRemove();
+		}
+		else
+		{
+			//If there are no more tabs to be remove draw the desired tabs
+
 			TArray<FDebugTab>& TabsToDraw = DebugSubsystem->GetTabs();
 
 			for (FDebugTab& Tab : TabsToDraw)
 			{
 				DrawTab(Tab, DebugSubsystem);
 			}
-		}
-	}
 
-	SlateIM::EndTabStack();
-	SlateIM::EndTabGroup();
-	SlateIM::EndBorder();
+			SlateIM::EndTabStack();
+			SlateIM::EndTabGroup();
+			SlateIM::EndBorder();
+		}	
+	}
+	else
+	{
+		SlateIM::EndTabStack();
+		SlateIM::EndTabGroup();
+		SlateIM::EndBorder();
+	}
+	
 }
 
 void FRuntimeIMDebugsExposed::DrawButton(const FDebugButton& InButton, URuntimeIMDebugsSubsystem* InDebugSubsystem)
@@ -302,18 +329,27 @@ void FRuntimeIMDebugsDockable::UnregisterTab()
 
 }
 
-void FRuntimeIMDebugsDockable::RecreateWidget()
+void FRuntimeIMDebugsDockable::OnWorldBeginTearDown(UWorld* InWorld)
 {
-	RuntimeIMWidget.Reset();
+	UE_LOG(LogRuntimeIMDebugs, Warning, TEXT("WORLD BEGIN TEAR DOWN UP CALLED"));
 
-	RuntimeIMWidget = MakeShared<FRuntimeIMDebugsExposed>();
-	RuntimeIMWidget->EnableWidget();
+	if (!InWorld)
+	{
+		return;
+	}
+
+	if (URuntimeIMDebugsSubsystem* DebugSubsystem =	InWorld->GetSubsystem<URuntimeIMDebugsSubsystem>())
+	{
+		UE_LOG(LogRuntimeIMDebugs, Warning, TEXT("SUBSYSTEM IS VALID"));
+
+		/*DebugSubsystem->RequestRemoveAllTabs();*/
+	}
 }
-
 
 void FRuntimeIMDebugsDockable::OnStartPIE()
 {
 	TryToReasignWidgetAsContentToTab();
+	UE_LOG(LogRuntimeIMDebugs, Warning, TEXT("START PIE CALLED"));
 }
 
 void FRuntimeIMDebugsDockable::HandleWindowCommand(ERuntimeIMDebugWindowCommand InCommand)

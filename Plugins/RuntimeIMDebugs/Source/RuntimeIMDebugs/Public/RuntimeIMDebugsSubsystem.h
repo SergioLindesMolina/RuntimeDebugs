@@ -379,6 +379,18 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     int AddTab(const FName InID, const FString& InLabel = TEXT(""));
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
+    void RequestRemoveTab(const FName InID);
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
+    void RequestRemoveAllTabs();
+    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
+    bool AreTabsPendingToRemove();
+    
+    const TArray<FName>& GetTabsIDToRemove();
+
+    void ClearTabsIDToRemove();
+
+    bool RemoveTab(FName InID);
 
     TArray<FDebugTab>& GetTabs();
 
@@ -446,6 +458,9 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "RuntimeDebugsSubsystem")
     FOnDebugComboBoxChanged OnDebugComboBoxChanged;
 
+
+    
+
 protected:
 
     FDebugTab* GetTab(const FName InID);
@@ -470,10 +485,13 @@ protected:
 
     const FName ResolveDebugSectionID(const FName InSectionID) const;
 
-    UPROPERTY(BlueprintReadOnly, Category = "RuntimeDebugsSubsystem")
-    TArray<FDebugTab> Tabs;
+   
 
 private:
+
+    TArray<FDebugTab> Tabs;
+
+    TArray<FName> TabsIDToRemove;
 
     //Runtime value of the default tab name and the default section name , they get initialized upon construction when the game start 
     // and then should no be changed

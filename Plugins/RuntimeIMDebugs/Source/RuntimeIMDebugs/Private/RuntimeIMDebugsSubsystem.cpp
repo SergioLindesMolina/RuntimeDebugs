@@ -16,14 +16,17 @@ void URuntimeIMDebugsSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	DefaultTab = Settings->DefaultTabName;
 	DefaultSection = Settings->DefaultSectionName;
 
-	AddTab(DefaultTab);
-	AddDebugSection(DefaultTab, DefaultSection);
+	AddTab(FName("Delete"));
+	RequestRemoveAllTabs();
+
+
+
 }
 
 void URuntimeIMDebugsSubsystem::Deinitialize()
 {
 	Tabs.Empty();	
-
+	
 	Super::Deinitialize();
 }
 
@@ -81,6 +84,63 @@ int URuntimeIMDebugsSubsystem::AddTab(const FName InID, const FString& InLabel)
 			,*InLabel ,*ResolvedTabID.ToString(), *Tabs[FoundTabIndex].Label);
 		return FoundTabIndex;
 	}
+}
+
+void URuntimeIMDebugsSubsystem::RequestRemoveTab(const FName InID)
+{
+	bool IDIsValid = Tabs.ContainsByPredicate([InID](const FDebugTab& InTab)
+		{
+			return InTab.ID == InID;
+		});
+	
+	if (IDIsValid) 
+	{
+		TabsIDToRemove.AddUnique(InID);
+	}
+
+}
+
+void URuntimeIMDebugsSubsystem::RequestRemoveAllTabs() 
+{
+	for (FDebugTab Tab : Tabs)
+	{
+		RequestRemoveTab(Tab.ID);
+	}
+}
+
+bool URuntimeIMDebugsSubsystem::AreTabsPendingToRemove()
+{
+	return !TabsIDToRemove.IsEmpty();
+}
+
+const TArray<FName>& URuntimeIMDebugsSubsystem::GetTabsIDToRemove()
+{
+	return TabsIDToRemove;
+}
+
+void URuntimeIMDebugsSubsystem::ClearTabsIDToRemove()
+{
+	TabsIDToRemove.Empty();
+}
+
+bool URuntimeIMDebugsSubsystem::RemoveTab(FName InID)
+{
+	int FoundTabIndex = Tabs.IndexOfByPredicate([InID](const FDebugTab& InTab)
+		{
+			return InTab.ID == InID;
+		});
+
+	if (FoundTabIndex != INDEX_NONE) 
+	{
+		Tabs.RemoveAt(FoundTabIndex);
+		return true;
+	}
+	else
+	{
+		//UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Failed to remove the tab with index %d"), InIndex);
+		return false;
+	}
+	
 }
 
 /**
@@ -291,7 +351,7 @@ TArray<FDebugTab>& URuntimeIMDebugsSubsystem::GetTabs()
 	 else
 	 {
 		 //If the selected tab does not exist we create the tab
-		 int CreatedTabIndex = AddTab(InTabID, InTabID.ToString());
+		 int CreatedTabIndex = AddTab(InTabID);
 		 return &Tabs[CreatedTabIndex];
 	 }
  }

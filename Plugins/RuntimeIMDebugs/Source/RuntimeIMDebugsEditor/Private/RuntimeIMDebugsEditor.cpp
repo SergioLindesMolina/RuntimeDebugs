@@ -9,15 +9,15 @@ void FRuntimeIMDebugsModuleEditor::StartupModule()
 
 	FRuntimeIMDebugsDockable::RegisterTab();
 
-	WorldInitializationHandle = FWorldDelegates::OnWorldInitializedActors.AddRaw(this,	&FRuntimeIMDebugsModuleEditor::OnPostWorldInitialization);
+	WorldCleanUpHandle = FWorldDelegates::OnWorldBeginTearDown.AddRaw(this,	&FRuntimeIMDebugsModuleEditor::OnWorldBeginTearDown);
 	StartPIEHandle = FEditorDelegates::StartPIE.AddRaw(this, &FRuntimeIMDebugsModuleEditor::OnStartPIE);
 }
 
 void FRuntimeIMDebugsModuleEditor::ShutdownModule()
 {
 
-	if(WorldInitializationHandle.IsValid())
-		FWorldDelegates::OnWorldInitializedActors.Remove(WorldInitializationHandle);
+	if(WorldCleanUpHandle.IsValid())
+		FWorldDelegates::OnWorldBeginTearDown.Remove(WorldCleanUpHandle);
 	
 	if (StartPIEHandle.IsValid())
 		FEditorDelegates::StartPIE.Remove(StartPIEHandle);
@@ -26,11 +26,10 @@ void FRuntimeIMDebugsModuleEditor::ShutdownModule()
 
 }
 
-void FRuntimeIMDebugsModuleEditor::OnPostWorldInitialization(const FActorsInitializedParams& InitializationParams)
+void FRuntimeIMDebugsModuleEditor::OnWorldBeginTearDown(UWorld* InWorld) 
 {
-	// It is necessary to recreate the widget when changing maps; otherwise, some tabs may be left dangling.
-	FRuntimeIMDebugsDockable::RecreateWidget();
-	
+
+	FRuntimeIMDebugsDockable::OnWorldBeginTearDown(InWorld);
 }
 
 void FRuntimeIMDebugsModuleEditor::OnStartPIE(const bool InIsSimulating)
