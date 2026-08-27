@@ -359,6 +359,8 @@ class RUNTIMEIMDEBUGS_API URuntimeIMDebugsSubsystem : public UWorldSubsystem
 {
 	GENERATED_BODY()
 
+    friend class FRuntimeIMDebugsExposed;
+
 public:
 
     //Delegate to comunicate with the editor window to open and close the window
@@ -377,22 +379,14 @@ public:
     UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     void ToggleWindow();
 
+
     UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     int AddTab(const FName InID, const FString& InLabel = TEXT(""));
     UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     void RequestRemoveTab(const FName InID);
     UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     void RequestRemoveAllTabs();
-    UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
-    bool AreTabsPendingToRemove();
-    
-    const TArray<FName>& GetTabsIDToRemove();
 
-    void ClearTabsIDToRemove();
-
-    bool RemoveTab(FName InID);
-
-    TArray<FDebugTab>& GetTabs();
 
     UFUNCTION(BlueprintCallable, Category = "RuntimeDebugsSubsystem")
     int AddDebugSection(const FName InTabID, const FName InID, const FString& InLabel = TEXT(""), int InDrawPriority = 0);
@@ -463,6 +457,8 @@ public:
 
 protected:
 
+    TArray<FDebugTab>& GetTabs();
+
     FDebugTab* GetTab(const FName InID);
 
     FDebugTab* GetTabChecked(const FName InID);
@@ -485,7 +481,18 @@ protected:
 
     const FName ResolveDebugSectionID(const FName InSectionID) const;
 
-   
+    const TArray<FName>& GetTabsIDToRemove();
+
+    void ClearTabsIDToRemove();
+
+    bool RemoveTab(FName InID);
+
+    void ProcessRemoveTabs();
+
+    void SetTabWindowDrawResetPending(bool InValue);
+
+    bool IsTabWindowDrawResetPending() const;
+
 
 private:
 
@@ -497,5 +504,7 @@ private:
     // and then should no be changed
     FName DefaultTab;
     FName DefaultSection;
+
+    bool bTabWindowDrawResetPending;
  
 };

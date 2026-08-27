@@ -16,11 +16,7 @@ void URuntimeIMDebugsSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	DefaultTab = Settings->DefaultTabName;
 	DefaultSection = Settings->DefaultSectionName;
 
-	AddTab(FName("Delete"));
-	RequestRemoveAllTabs();
-
-
-
+	SetTabWindowDrawResetPending(true);
 }
 
 void URuntimeIMDebugsSubsystem::Deinitialize()
@@ -50,6 +46,8 @@ void URuntimeIMDebugsSubsystem::ToggleWindow()
 	OnWindowCommand.Broadcast(ERuntimeIMDebugWindowCommand::Toggle);	
 #endif
 }
+
+
 
 /**
  * Adds a new debug tab.
@@ -96,6 +94,7 @@ void URuntimeIMDebugsSubsystem::RequestRemoveTab(const FName InID)
 	if (IDIsValid) 
 	{
 		TabsIDToRemove.AddUnique(InID);
+		SetTabWindowDrawResetPending(true);
 	}
 
 }
@@ -108,40 +107,7 @@ void URuntimeIMDebugsSubsystem::RequestRemoveAllTabs()
 	}
 }
 
-bool URuntimeIMDebugsSubsystem::AreTabsPendingToRemove()
-{
-	return !TabsIDToRemove.IsEmpty();
-}
 
-const TArray<FName>& URuntimeIMDebugsSubsystem::GetTabsIDToRemove()
-{
-	return TabsIDToRemove;
-}
-
-void URuntimeIMDebugsSubsystem::ClearTabsIDToRemove()
-{
-	TabsIDToRemove.Empty();
-}
-
-bool URuntimeIMDebugsSubsystem::RemoveTab(FName InID)
-{
-	int FoundTabIndex = Tabs.IndexOfByPredicate([InID](const FDebugTab& InTab)
-		{
-			return InTab.ID == InID;
-		});
-
-	if (FoundTabIndex != INDEX_NONE) 
-	{
-		Tabs.RemoveAt(FoundTabIndex);
-		return true;
-	}
-	else
-	{
-		//UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Failed to remove the tab with index %d"), InIndex);
-		return false;
-	}
-	
-}
 
 /**
  * Adds a debug section to a tab.
@@ -172,7 +138,6 @@ int URuntimeIMDebugsSubsystem::AddDebugSection(const FName InTabID, const FName 
 
 			//Given that tabs only contains one type, DebugSections
 			//Always sort the array after adding a new DebugSection to avoid sorting each frame in the draw window
-
 			SelectedTab->DebugSections.StableSort([](const FDebugSection& A, const FDebugSection& B)
 				{
 					return A.DrawPriority < B.DrawPriority;
@@ -861,4 +826,54 @@ void URuntimeIMDebugsSubsystem::SetText(const FName InTabID, const FName InSecti
 				*InID.ToString());
 		}
 	}
+}
+
+const TArray<FName>& URuntimeIMDebugsSubsystem::GetTabsIDToRemove()
+{
+	return TabsIDToRemove;
+}
+
+void URuntimeIMDebugsSubsystem::ClearTabsIDToRemove()
+{
+	TabsIDToRemove.Empty();
+}
+
+bool URuntimeIMDebugsSubsystem::RemoveTab(FName InID)
+{
+	int FoundTabIndex = Tabs.IndexOfByPredicate([InID](const FDebugTab& InTab)
+		{
+			return InTab.ID == InID;
+		});
+
+	if (FoundTabIndex != INDEX_NONE)
+	{
+		Tabs.RemoveAt(FoundTabIndex);
+		return true;
+	}
+	else
+	{
+		UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Failed to remove the tab with id : %s"), *InID.ToString());
+		return false;
+	}
+
+}
+
+void URuntimeIMDebugsSubsystem::ProcessRemoveTabs()
+{
+	for (FName TabID : GetTabsIDToRemove())
+	{
+		RemoveTab(TabID);
+	}
+
+	ClearTabsIDToRemove();
+}
+
+bool URuntimeIMDebugsSubsystem::IsTabWindowDrawResetPending() const
+{
+	return bTabWindowDrawResetPending;
+}
+
+void URuntimeIMDebugsSubsystem::SetTabWindowDrawResetPending(bool InValue)
+{
+	bTabWindowDrawResetPending = InValue;
 }

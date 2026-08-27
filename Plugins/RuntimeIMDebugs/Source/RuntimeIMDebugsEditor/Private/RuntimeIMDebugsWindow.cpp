@@ -40,19 +40,16 @@ void FRuntimeIMDebugsExposed::DrawContent(float DeltaTime)
 	
 	if (DebugSubsystem)
 	{
-		//Check if there are tabs to remove and remove them to ensure that the elimination does not happen in the middle of a draw command
-		for (FName TabID : DebugSubsystem->GetTabsIDToRemove())
-		{
-			DebugSubsystem->RemoveTab(TabID);
-		}
-
-		//In case of finding tabs to remove end the draw in this moment and empty the tabs to delete array because all the tabs have been eleiminated
-		if (DebugSubsystem->AreTabsPendingToRemove()) 
+		
+		//Workaround
+		//Whenever the subsytem initiates or a tab is removed is necesary to reset the tab group waiting one frame without paining anything oterwise a dangling tab will appear
+		if (DebugSubsystem->IsTabWindowDrawResetPending()) 
 		{
 			SlateIM::EndTabStack();
 			SlateIM::EndTabGroup();
 			SlateIM::EndBorder();
-			DebugSubsystem->ClearTabsIDToRemove();
+			DebugSubsystem->ProcessRemoveTabs();
+			DebugSubsystem->SetTabWindowDrawResetPending(false);
 		}
 		else
 		{
@@ -329,22 +326,6 @@ void FRuntimeIMDebugsDockable::UnregisterTab()
 
 }
 
-void FRuntimeIMDebugsDockable::OnWorldBeginTearDown(UWorld* InWorld)
-{
-	UE_LOG(LogRuntimeIMDebugs, Warning, TEXT("WORLD BEGIN TEAR DOWN UP CALLED"));
-
-	if (!InWorld)
-	{
-		return;
-	}
-
-	if (URuntimeIMDebugsSubsystem* DebugSubsystem =	InWorld->GetSubsystem<URuntimeIMDebugsSubsystem>())
-	{
-		UE_LOG(LogRuntimeIMDebugs, Warning, TEXT("SUBSYSTEM IS VALID"));
-
-		/*DebugSubsystem->RequestRemoveAllTabs();*/
-	}
-}
 
 void FRuntimeIMDebugsDockable::OnStartPIE()
 {

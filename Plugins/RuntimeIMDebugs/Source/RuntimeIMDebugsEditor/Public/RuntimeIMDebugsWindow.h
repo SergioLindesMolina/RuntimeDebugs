@@ -53,8 +53,6 @@ public:
 
 	static void UnregisterTab();
 	
-	static void OnWorldBeginTearDown(UWorld* InWorld);
-
 	static void OnStartPIE();
 
 	static void HandleWindowCommand(ERuntimeIMDebugWindowCommand InCommand);

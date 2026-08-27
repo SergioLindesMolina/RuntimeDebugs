@@ -6,19 +6,14 @@
 
 void FRuntimeIMDebugsModuleEditor::StartupModule()
 {
-
 	FRuntimeIMDebugsDockable::RegisterTab();
 
-	WorldCleanUpHandle = FWorldDelegates::OnWorldBeginTearDown.AddRaw(this,	&FRuntimeIMDebugsModuleEditor::OnWorldBeginTearDown);
 	StartPIEHandle = FEditorDelegates::StartPIE.AddRaw(this, &FRuntimeIMDebugsModuleEditor::OnStartPIE);
 }
 
 void FRuntimeIMDebugsModuleEditor::ShutdownModule()
 {
 
-	if(WorldCleanUpHandle.IsValid())
-		FWorldDelegates::OnWorldBeginTearDown.Remove(WorldCleanUpHandle);
-	
 	if (StartPIEHandle.IsValid())
 		FEditorDelegates::StartPIE.Remove(StartPIEHandle);
 
@@ -26,11 +21,6 @@ void FRuntimeIMDebugsModuleEditor::ShutdownModule()
 
 }
 
-void FRuntimeIMDebugsModuleEditor::OnWorldBeginTearDown(UWorld* InWorld) 
-{
-
-	FRuntimeIMDebugsDockable::OnWorldBeginTearDown(InWorld);
-}
 
 void FRuntimeIMDebugsModuleEditor::OnStartPIE(const bool InIsSimulating)
 {

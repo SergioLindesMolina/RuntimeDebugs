@@ -18,9 +18,7 @@ public:
 
 private:
 
-	void OnWorldBeginTearDown(UWorld* InWorld);
 	void OnStartPIE(const bool InIsSimulating);
 
-	FDelegateHandle WorldCleanUpHandle;
 	FDelegateHandle StartPIEHandle;
 };
