@@ -39,8 +39,7 @@ void FRuntimeIMDebugsExposed::DrawContent(float DeltaTime)
 	SlateIM::BeginTabStack();
 	
 	if (DebugSubsystem)
-	{
-		
+	{		
 		//Workaround
 		//Whenever the subsytem initiates or a tab is removed is necesary to reset the tab group waiting one frame without paining anything oterwise a dangling tab will appear
 		if (DebugSubsystem->IsTabWindowDrawResetPending()) 

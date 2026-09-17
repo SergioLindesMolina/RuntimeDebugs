@@ -41,7 +41,6 @@ void FRuntimeIMDebugsModule::ShutdownModule()
 
 void FRuntimeIMDebugsModule::HandleShowWindowConsoleCommand(const TArray<FString>& Args)
 {
-
 	if (!GEngine)
 	{
 		return;

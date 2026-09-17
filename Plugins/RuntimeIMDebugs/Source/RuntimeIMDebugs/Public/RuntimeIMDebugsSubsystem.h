@@ -286,7 +286,7 @@ struct FDebugSection
     {
     }
 
-    FDebugSection(FName InTabID, FName InID, const FString InLabel, int InDrawPriority)
+    FDebugSection(FName InTabID, FName InID, const FString& InLabel, int InDrawPriority)
         : 
         TabID(InTabID),
         ID(InID),
