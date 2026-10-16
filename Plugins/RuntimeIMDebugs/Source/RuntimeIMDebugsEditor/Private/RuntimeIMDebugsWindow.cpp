@@ -16,19 +16,58 @@ void FRuntimeIMDebugsExposed::DrawContent(float DeltaTime)
 	UWorld* World = nullptr;
 	URuntimeIMDebugsSubsystem* DebugSubsystem = nullptr;
 
+	if (!GEngine) 
+	{
+		UE_LOG(LogRuntimeIMDebugs, Error, TEXT("Engine pointer is null"));
+		return;
+	}
+
+	UWorld* ClientWorld = nullptr;
+	UWorld* LocalWorld = nullptr;
+	//This funtion intend to use the first world that searve our purposes
 	for (const FWorldContext& Context : GEngine->GetWorldContexts())
 	{
-		if (Context.WorldType == EWorldType::PIE || Context.WorldType == EWorldType::Game)
+		UWorld* CurrentWorld = Context.World();
+
+		//Check that the world is valide that, ensure that the world types are Game or PIE and then ensure the NetMode is not a DedicatedServer 
+		if (!CurrentWorld)
 		{
-			//World found stop the for loop
-			World = Context.World();
+			continue;
+		}
+
+		if ((Context.WorldType != EWorldType::PIE && Context.WorldType != EWorldType::Game)) 
+		{
+			continue;
+		}
+
+		if (CurrentWorld->GetNetMode() == ENetMode::NM_DedicatedServer || CurrentWorld->GetNetMode() == ENetMode::NM_MAX) 
+		{
+			continue;
+		}
+
+		//Pick the first local world and keep searching the array in case a client world exist
+		if (!LocalWorld)
+		{
+			LocalWorld = CurrentWorld;			
+		}
+
+		if (CurrentWorld->GetNetMode() == NM_Client)
+		{
+			ClientWorld = CurrentWorld;
 			break;
 		}
 	}
 
+	//Always prefer to pick a client world instead of a local world 	
+	World = ClientWorld ? ClientWorld : LocalWorld;
+
 	if (World)
 	{
-		DebugSubsystem = World->GetSubsystem<URuntimeIMDebugsSubsystem>();		
+		DebugSubsystem = World->GetSubsystem<URuntimeIMDebugsSubsystem>();	
+	}
+	else
+	{
+		return;
 	}
 
 	SlateIM::BeginBorder(FAppStyle::GetBrush("ToolPanel.GroupBorder"), Orient_Vertical, false);
@@ -72,7 +111,6 @@ void FRuntimeIMDebugsExposed::DrawContent(float DeltaTime)
 		SlateIM::EndTabGroup();
 		SlateIM::EndBorder();
 	}
-	
 }
 
 void FRuntimeIMDebugsExposed::DrawButton(const FDebugButton& InButton, URuntimeIMDebugsSubsystem* InDebugSubsystem)
@@ -173,6 +211,15 @@ void FRuntimeIMDebugsExposed::DrawDebugSection(FDebugSection& InDebugSection, UR
 	//Add all the debug fileds to an array of draw entires to sort them by draw priority 
 
 	TArray<FDebugFieldDrawListEntry> DrawEntries;
+
+	DrawEntries.Reserve(
+		InDebugSection.FloatFields.Num() +
+		InDebugSection.ComboBoxes.Num() +
+		InDebugSection.TextFields.Num() +
+		InDebugSection.Toggles.Num() +
+		InDebugSection.SpinBoxes.Num() +
+		InDebugSection.Buttons.Num()
+	);
 
 	for (FDebugFloatField& FloatField : InDebugSection.FloatFields)
 	{
@@ -303,33 +350,40 @@ void FRuntimeIMDebugsDockable::RegisterTab()
 	}
 }
 
-// When the module is shutting down, the tab spawner is unregistered from the global tab manager,
-// and RuntimeIMWidget is reset to release the widget. The command is also unregistered.
+// When the editor is existing is the correct moment to shutt down. The tab spawner is unregistered from the global tab manager,
+// RuntimeIMWidget is reset to release the widget. The RuntimeIMTab is also cleaned. The command is also unregistered.
 void FRuntimeIMDebugsDockable::UnregisterTab()
 {
 	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
 	if (TabManager->HasTabSpawner(TabId)) 
 	{
-		TabManager->UnregisterNomadTabSpawner(TabId);
+		TabManager->UnregisterNomadTabSpawner(TabId);	
+	}
+
+	if (RuntimeIMTab.IsValid())
+	{
+		if (TSharedPtr<SDockTab> Tab = RuntimeIMTab.Pin())
+		{
+			Tab->SetContent(SNullWidget::NullWidget);
+			Tab->RequestCloseTab();
+		}
+		
+		RuntimeIMTab.Reset();
 	}
 
 	if (RuntimeIMWidget.IsValid())
 	{
-		//This causes a crash when the editor is closing - TODO Find the root reason
-		//RuntimeIMWidget->DisableWidget();
-		
-		URuntimeIMDebugsSubsystem::OnWindowCommand.Remove(WindowCommandHandle);
-		
+		RuntimeIMWidget->DisableWidget();	
 		RuntimeIMWidget.Reset();
 	}
 
+	URuntimeIMDebugsSubsystem::OnWindowCommand.Remove(WindowCommandHandle);
 }
-
 
 void FRuntimeIMDebugsDockable::OnStartPIE()
 {
 	TryToReasignWidgetAsContentToTab();
-	UE_LOG(LogRuntimeIMDebugs, Warning, TEXT("START PIE CALLED"));
+	//UE_LOG(LogRuntimeIMDebugs, Warning, TEXT("START PIE CALLED"));
 }
 
 void FRuntimeIMDebugsDockable::HandleWindowCommand(ERuntimeIMDebugWindowCommand InCommand)
@@ -372,7 +426,11 @@ void FRuntimeIMDebugsDockable::TryToReasignWidgetAsContentToTab()
 
 		//UE_LOG(LogRuntimeIMDebugs, Warning, TEXT("ContentTab type: %s"), *CurrentRuntimeTabContent->GetType().ToString());
 
-		check(RuntimeIMWidget.IsValid());
+		if (!RuntimeIMWidget.IsValid()) 
+		{
+			UE_LOG(LogRuntimeIMDebugs, Error, TEXT(" The pointer to the widget is not valid "));
+			return;
+		}
 
 		if (CurrentRuntimeTabContent->GetType() != RuntimeIMWidget->GetExposedWidget()->GetType())
 		{
@@ -410,7 +468,15 @@ void FRuntimeIMDebugsDockable::ToggleTab()
 
 TSharedRef<SDockTab> FRuntimeIMDebugsDockable::SpawnTab(const FSpawnTabArgs& Args)
 {
-	check(RuntimeIMWidget.IsValid());
+	if (!RuntimeIMWidget.IsValid())
+	{
+		UE_LOG(LogRuntimeIMDebugs, Error, TEXT(" The pointer to the widget is not valid is not possible to spawn a new tab "));
+
+		return SNew(SDockTab).TabRole(ETabRole::NomadTab)
+			[
+				SNew(STextBlock).Text(FText::FromString(TEXT("RuntimeIMDebugs widget is unavailable.")))
+			];
+	}
 
 	TSharedRef<SDockTab> Tab = SNew(SDockTab)
 		.TabRole(ETabRole::NomadTab)

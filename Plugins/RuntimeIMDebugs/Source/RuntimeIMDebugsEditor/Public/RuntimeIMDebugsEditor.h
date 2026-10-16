@@ -20,5 +20,9 @@ private:
 
 	void OnStartPIE(const bool InIsSimulating);
 
+	void OnEditorPreExit();
+
 	FDelegateHandle StartPIEHandle;
+	FDelegateHandle EditorPreExitHandle;
+	
 };
