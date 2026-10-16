@@ -1,5 +1,8 @@
 # RuntimeIMDebugs
 
+<img width="1125" height="657" alt="image" src="https://github.com/user-attachments/assets/f3aaff17-ec82-4b9f-8327-2e14a9f5ae1a" />
+
+
 ## Contents
 
 - [About](#about)
@@ -38,7 +41,25 @@ The plugin can also work with client worlds, although world selection may be les
 
 The Unreal Editor's Standalone Play Mode is not currently supported. The plugin is intended for editor-integrated development and debugging, rather than for providing a production debugging interface for packaged games.
 
-<img width="1125" height="657" alt="image" src="https://github.com/user-attachments/assets/f3aaff17-ec82-4b9f-8327-2e14a9f5ae1a" />
+❤️ Support the Project
+
+RuntimeIMDebugs is free to use and extend. If you find it useful and would like to support its development and future improvements, you can make a voluntary donation.
+
+Donations are entirely optional. All plugin features remain available without donating.
+
+Donate: 
+
+Thank you for supporting the project!
+
+🎥 Video Tutorials
+
+Learn how to  use RuntimeIMDebugs through video tutorials.
+
+Getting Started: 
+
+Blueprint Use: 
+
+C++ Use:
 
 ## Features
 
